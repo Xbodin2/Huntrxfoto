@@ -1,0 +1,1227 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="theme-color" content="#030008">
+  <title>HuntrX AR — K-Pop Demon Hunters</title>
+
+  <!-- MindAR + A-Frame -->
+  <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image.prod.js"></script>
+  <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
+
+  <style>
+    /* ===== FONT ===== */
+    @font-face {
+      font-family: 'HuntersKPop';
+      src: url('assets/Hunters_K-Pop.otf') format('opentype');
+      font-display: block;
+    }
+
+    /* ===== RESET & BASE ===== */
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body {
+      width: 100%; height: 100%;
+      overflow: hidden;
+      background: #030008;
+      color: #fff;
+      font-family: 'HuntersKPop', 'Segoe UI', sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ===== CSS VARIABLES ===== */
+    :root {
+      --mira-color: #FF2D9B;
+      --mira-glow: rgba(255,45,155,0.7);
+      --rumi-color: #8B2FFF;
+      --rumi-glow: rgba(139,47,255,0.7);
+      --zoey-color: #00E5FF;
+      --zoey-glow: rgba(0,229,255,0.7);
+      --gold: #FFD700;
+      --bg-deep: #030008;
+    }
+
+    /* ===== SHARED SCREEN MIXIN ===== */
+    .screen {
+      position: fixed; inset: 0;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      z-index: 1000;
+    }
+
+    /* ===================================================
+       SPLASH SCREEN
+    =================================================== */
+    #splash {
+      background: radial-gradient(ellipse at 50% 30%, #1a003a 0%, #030008 70%);
+    }
+
+    /* Animated background stars */
+    #splash::before {
+      content: '';
+      position: absolute; inset: 0;
+      background-image:
+        radial-gradient(1px 1px at 20% 30%, rgba(255,255,255,0.6) 0%, transparent 100%),
+        radial-gradient(1px 1px at 80% 10%, rgba(255,255,255,0.4) 0%, transparent 100%),
+        radial-gradient(1px 1px at 50% 70%, rgba(255,255,255,0.5) 0%, transparent 100%),
+        radial-gradient(1px 1px at 10% 60%, rgba(255,255,255,0.3) 0%, transparent 100%),
+        radial-gradient(1px 1px at 70% 50%, rgba(255,255,255,0.4) 0%, transparent 100%),
+        radial-gradient(2px 2px at 35% 15%, rgba(255,45,155,0.5) 0%, transparent 100%),
+        radial-gradient(2px 2px at 65% 80%, rgba(139,47,255,0.5) 0%, transparent 100%),
+        radial-gradient(2px 2px at 85% 40%, rgba(0,229,255,0.5) 0%, transparent 100%);
+      animation: twinkle 4s ease-in-out infinite alternate;
+    }
+
+    @keyframes twinkle {
+      0% { opacity: 0.6; }
+      100% { opacity: 1; }
+    }
+
+    .splash-logo-wrap {
+      position: relative;
+      text-align: center;
+      margin-bottom: 0.5rem;
+    }
+
+    .splash-logo {
+      font-size: clamp(3rem, 15vw, 5.5rem);
+      letter-spacing: 4px;
+      background: linear-gradient(135deg, var(--mira-color) 0%, var(--gold) 50%, var(--zoey-color) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      filter: drop-shadow(0 0 30px rgba(255,45,155,0.6));
+      animation: logoPulse 3s ease-in-out infinite;
+      line-height: 1;
+    }
+
+    @keyframes logoPulse {
+      0%, 100% { filter: drop-shadow(0 0 20px rgba(255,45,155,0.5)) drop-shadow(0 0 40px rgba(139,47,255,0.3)); }
+      50% { filter: drop-shadow(0 0 40px rgba(255,215,0,0.8)) drop-shadow(0 0 80px rgba(0,229,255,0.4)); }
+    }
+
+    .splash-subtitle {
+      font-size: clamp(0.6rem, 3vw, 0.85rem);
+      letter-spacing: 6px;
+      color: rgba(255,255,255,0.5);
+      text-transform: uppercase;
+      margin-top: 0.5rem;
+      margin-bottom: 2.5rem;
+    }
+
+    .char-trio {
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+      gap: clamp(0.5rem, 3vw, 1.5rem);
+      margin-bottom: 3rem;
+      position: relative;
+    }
+
+    .char-card {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.4rem;
+      cursor: default;
+    }
+
+    .char-img-wrap {
+      position: relative;
+      border-radius: 16px;
+      overflow: visible;
+    }
+
+    .char-img {
+      height: clamp(120px, 25vw, 180px);
+      width: auto;
+      object-fit: contain;
+      display: block;
+      filter: drop-shadow(0 0 12px currentColor);
+      animation: floatChar 3s ease-in-out infinite;
+    }
+
+    .char-card:nth-child(1) .char-img { color: var(--mira-color); animation-delay: 0s; }
+    .char-card:nth-child(2) .char-img { color: var(--rumi-color); animation-delay: -1s; height: clamp(140px, 30vw, 210px); }
+    .char-card:nth-child(3) .char-img { color: var(--zoey-color); animation-delay: -2s; }
+
+    @keyframes floatChar {
+      0%, 100% { transform: translateY(0) scale(1); }
+      50% { transform: translateY(-12px) scale(1.02); }
+    }
+
+    .char-name-badge {
+      font-size: clamp(0.55rem, 2.5vw, 0.75rem);
+      letter-spacing: 3px;
+      padding: 3px 10px;
+      border-radius: 20px;
+      font-weight: 700;
+    }
+
+    .char-card:nth-child(1) .char-name-badge { color: var(--mira-color); border: 1px solid var(--mira-color); text-shadow: 0 0 10px var(--mira-color); }
+    .char-card:nth-child(2) .char-name-badge { color: var(--rumi-color); border: 1px solid var(--rumi-color); text-shadow: 0 0 10px var(--rumi-color); }
+    .char-card:nth-child(3) .char-name-badge { color: var(--zoey-color); border: 1px solid var(--zoey-color); text-shadow: 0 0 10px var(--zoey-color); }
+
+    .start-btn {
+      position: relative;
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-family: 'HuntersKPop', sans-serif;
+      font-size: clamp(0.9rem, 4vw, 1.1rem);
+      letter-spacing: 4px;
+      color: #fff;
+      padding: 0;
+      outline: none;
+    }
+
+    .start-btn-inner {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 1rem 2.5rem;
+      background: linear-gradient(135deg, rgba(255,45,155,0.2), rgba(139,47,255,0.2));
+      border: 1px solid rgba(255,45,155,0.6);
+      border-radius: 60px;
+      backdrop-filter: blur(10px);
+      transition: all 0.3s ease;
+      box-shadow:
+        0 0 20px rgba(255,45,155,0.3),
+        inset 0 0 20px rgba(255,45,155,0.05);
+    }
+
+    .start-btn:hover .start-btn-inner,
+    .start-btn:active .start-btn-inner {
+      background: linear-gradient(135deg, rgba(255,45,155,0.4), rgba(139,47,255,0.4));
+      box-shadow: 0 0 40px rgba(255,45,155,0.6), 0 0 80px rgba(139,47,255,0.3);
+      transform: scale(1.04);
+    }
+
+    .btn-icon { font-size: 1.3rem; }
+
+    /* ===================================================
+       COMPILE / LOADING SCREEN
+    =================================================== */
+    #compile-screen {
+      background: radial-gradient(ellipse at 50% 50%, #1a003a 0%, #030008 80%);
+      display: none;
+    }
+
+    .compile-logo {
+      font-size: clamp(2rem, 10vw, 3.5rem);
+      background: linear-gradient(135deg, var(--mira-color), var(--gold), var(--zoey-color));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 0.5rem;
+      letter-spacing: 4px;
+    }
+
+    .compile-msg {
+      font-size: clamp(0.8rem, 3vw, 1rem);
+      color: rgba(255,255,255,0.7);
+      letter-spacing: 2px;
+      margin-bottom: 2.5rem;
+      text-align: center;
+      max-width: 280px;
+    }
+
+    .progress-track {
+      width: min(340px, 80vw);
+      height: 6px;
+      background: rgba(255,255,255,0.08);
+      border-radius: 6px;
+      overflow: hidden;
+      margin-bottom: 0.75rem;
+    }
+
+    .progress-fill {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, var(--mira-color), var(--rumi-color), var(--zoey-color));
+      border-radius: 6px;
+      transition: width 0.3s ease;
+      box-shadow: 0 0 12px rgba(255,45,155,0.7);
+    }
+
+    .progress-pct {
+      font-size: 0.85rem;
+      color: rgba(255,255,255,0.5);
+      letter-spacing: 2px;
+    }
+
+    .compile-note {
+      margin-top: 1.5rem;
+      font-size: 0.7rem;
+      color: rgba(255,255,255,0.3);
+      text-align: center;
+      max-width: 300px;
+      line-height: 1.6;
+      font-family: 'Segoe UI', sans-serif;
+    }
+
+    /* Loading spinner */
+    .spinner {
+      width: 50px; height: 50px;
+      border: 3px solid rgba(255,45,155,0.2);
+      border-top-color: var(--mira-color);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin-bottom: 2rem;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ===================================================
+       AR SCENE CONTAINER
+    =================================================== */
+    #ar-container {
+      position: fixed; inset: 0;
+      display: none;
+      z-index: 1;
+    }
+
+    #ar-container a-scene {
+      width: 100% !important;
+      height: 100% !important;
+    }
+
+    /* ===================================================
+       PARTICLE CANVAS (floats above AR)
+    =================================================== */
+    #particle-canvas {
+      position: fixed; inset: 0;
+      pointer-events: none;
+      z-index: 50;
+      display: none;
+    }
+
+    /* ===================================================
+       AR UI OVERLAY
+    =================================================== */
+    #ar-ui {
+      position: fixed; inset: 0;
+      pointer-events: none;
+      z-index: 100;
+      display: none;
+    }
+
+    /* Scan frame (shown when no target) */
+    #scan-frame {
+      position: absolute;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      width: min(220px, 60vw);
+      height: min(220px, 60vw);
+      transition: opacity 0.4s;
+    }
+
+    .corner {
+      position: absolute;
+      width: 28px; height: 28px;
+      border-color: rgba(255,45,155,0.9);
+      border-style: solid;
+    }
+    .corner.tl { top: 0; left: 0; border-width: 3px 0 0 3px; border-radius: 4px 0 0 0; }
+    .corner.tr { top: 0; right: 0; border-width: 3px 3px 0 0; border-radius: 0 4px 0 0; }
+    .corner.bl { bottom: 0; left: 0; border-width: 0 0 3px 3px; border-radius: 0 0 0 4px; }
+    .corner.br { bottom: 0; right: 0; border-width: 0 3px 3px 0; border-radius: 0 0 4px 0; }
+
+    .scan-line {
+      position: absolute;
+      top: 0; left: 2px; right: 2px;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, var(--mira-color), transparent);
+      animation: scanDown 1.8s ease-in-out infinite;
+      box-shadow: 0 0 8px var(--mira-color);
+    }
+
+    @keyframes scanDown {
+      0% { top: 2px; opacity: 1; }
+      90% { top: calc(100% - 2px); opacity: 1; }
+      100% { top: calc(100% - 2px); opacity: 0; }
+    }
+
+    /* Scan instruction text */
+    #scan-hint {
+      position: absolute;
+      bottom: 22%;
+      left: 50%; transform: translateX(-50%);
+      font-size: clamp(0.6rem, 2.5vw, 0.78rem);
+      letter-spacing: 3px;
+      color: rgba(255,255,255,0.7);
+      text-align: center;
+      white-space: nowrap;
+      text-shadow: 0 2px 10px rgba(0,0,0,0.8);
+      transition: all 0.4s;
+    }
+
+    /* Character name revealed when target found */
+    #char-name-reveal {
+      position: absolute;
+      top: 8%;
+      left: 50%; transform: translateX(-50%);
+      text-align: center;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s;
+    }
+
+    #char-name-reveal.visible { opacity: 1; }
+
+    .reveal-name {
+      font-size: clamp(2.5rem, 12vw, 5rem);
+      letter-spacing: 6px;
+      line-height: 1;
+      display: block;
+    }
+
+    .reveal-role {
+      font-size: clamp(0.55rem, 2.5vw, 0.75rem);
+      letter-spacing: 5px;
+      opacity: 0.8;
+      display: block;
+      margin-top: 0.3rem;
+    }
+
+    @keyframes nameIn {
+      from { opacity: 0; transform: translateY(-10px) scale(0.85); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    /* ===================================================
+       BOTTOM UI — CAPTURE BUTTON
+    =================================================== */
+    #bottom-ui {
+      position: fixed;
+      bottom: 0; left: 0; right: 0;
+      padding: 1.5rem 2rem 2.5rem;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.8rem;
+      z-index: 200;
+      background: linear-gradient(to top, rgba(3,0,8,0.7) 0%, transparent 100%);
+      pointer-events: none;
+    }
+
+    .capture-ring {
+      width: 78px; height: 78px;
+      border-radius: 50%;
+      border: 3px solid rgba(255,255,255,0.5);
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer;
+      pointer-events: auto;
+      transition: all 0.2s ease;
+      background: rgba(255,255,255,0.05);
+      backdrop-filter: blur(4px);
+      box-shadow: 0 0 20px rgba(255,45,155,0.3), 0 4px 20px rgba(0,0,0,0.4);
+    }
+
+    .capture-ring:active { transform: scale(0.9); }
+    .capture-ring:hover { box-shadow: 0 0 40px rgba(255,45,155,0.6); border-color: rgba(255,45,155,0.8); }
+
+    .capture-dot {
+      width: 60px; height: 60px;
+      border-radius: 50%;
+      background: radial-gradient(circle, #fff 0%, rgba(255,255,255,0.8) 100%);
+    }
+
+    /* ===================================================
+       FLASH + NOTIFICATIONS
+    =================================================== */
+    #flash {
+      position: fixed; inset: 0;
+      background: #fff;
+      opacity: 0;
+      pointer-events: none;
+      z-index: 900;
+      transition: opacity 0.08s ease-in;
+    }
+
+    #saved-notif {
+      position: fixed;
+      top: 5%; left: 50%; transform: translateX(-50%);
+      background: rgba(10, 0, 30, 0.85);
+      border: 1px solid rgba(255,45,155,0.5);
+      color: #fff;
+      padding: 0.6rem 1.5rem;
+      border-radius: 50px;
+      font-size: 0.75rem;
+      letter-spacing: 2px;
+      z-index: 950;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s;
+      backdrop-filter: blur(10px);
+      box-shadow: 0 0 20px rgba(255,45,155,0.3);
+    }
+
+    /* Error banner */
+    #error-banner {
+      position: fixed;
+      bottom: 15%;
+      left: 50%; transform: translateX(-50%);
+      background: rgba(200,0,50,0.85);
+      color: #fff;
+      padding: 0.7rem 1.5rem;
+      border-radius: 8px;
+      font-size: 0.75rem;
+      letter-spacing: 1px;
+      z-index: 950;
+      display: none;
+      max-width: 80vw;
+      text-align: center;
+      font-family: 'Segoe UI', sans-serif;
+    }
+
+    /* Retry button */
+    #retry-btn {
+      display: none;
+      margin-top: 1.5rem;
+      background: rgba(255,45,155,0.2);
+      border: 1px solid var(--mira-color);
+      color: #fff;
+      font-family: 'HuntersKPop', sans-serif;
+      font-size: 0.8rem;
+      letter-spacing: 3px;
+      padding: 0.7rem 2rem;
+      border-radius: 40px;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+
+    #retry-btn:hover { background: rgba(255,45,155,0.4); box-shadow: 0 0 20px rgba(255,45,155,0.5); }
+
+  </style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════════
+     SPLASH SCREEN
+══════════════════════════════════════════════════════ -->
+<div id="splash" class="screen">
+  <div class="splash-logo-wrap">
+    <div class="splash-logo">HuntrX</div>
+    <div class="splash-subtitle">K-Pop Demon Hunters</div>
+  </div>
+
+  <div class="char-trio">
+    <div class="char-card">
+      <img class="char-img" src="assets/Mira.png" alt="Mira">
+      <span class="char-name-badge">MIRA</span>
+    </div>
+    <div class="char-card">
+      <img class="char-img" src="assets/Rumi.png" alt="Rumi">
+      <span class="char-name-badge">RUMI</span>
+    </div>
+    <div class="char-card">
+      <img class="char-img" src="assets/Zoey.png" alt="Zoey">
+      <span class="char-name-badge">ZOEY</span>
+    </div>
+  </div>
+
+  <button class="start-btn" id="start-btn" onclick="startApp()">
+    <div class="start-btn-inner">
+      <span class="btn-icon">✦</span>
+      <span>ACTIVER L'AR</span>
+      <span class="btn-icon">✦</span>
+    </div>
+  </button>
+</div>
+
+<!-- ═══════════════════════════════════════════════════
+     COMPILE / LOADING SCREEN
+══════════════════════════════════════════════════════ -->
+<div id="compile-screen" class="screen">
+  <div class="compile-logo">HuntrX</div>
+  <div class="compile-msg" id="compile-msg">Initialisation de la magie...</div>
+  <div class="progress-track">
+    <div class="progress-fill" id="progress-fill"></div>
+  </div>
+  <div class="progress-pct" id="progress-pct">0%</div>
+  <div class="compile-note" id="compile-note">
+    Première utilisation : compilation des personnages (~30s)<br>
+    Les prochaines fois, le chargement sera immédiat ✨
+  </div>
+  <button id="retry-btn" onclick="retryCompile()">↺ RÉESSAYER</button>
+</div>
+
+<!-- ═══════════════════════════════════════════════════
+     AR SCENE (injected dynamically)
+══════════════════════════════════════════════════════ -->
+<div id="ar-container"></div>
+
+<!-- PARTICLE CANVAS -->
+<canvas id="particle-canvas"></canvas>
+
+<!-- ═══════════════════════════════════════════════════
+     AR UI OVERLAY
+══════════════════════════════════════════════════════ -->
+<div id="ar-ui">
+  <!-- Scan frame (hidden when target found) -->
+  <div id="scan-frame">
+    <div class="corner tl"></div>
+    <div class="corner tr"></div>
+    <div class="corner bl"></div>
+    <div class="corner br"></div>
+    <div class="scan-line"></div>
+  </div>
+
+  <!-- Character name reveal -->
+  <div id="char-name-reveal">
+    <span class="reveal-name" id="reveal-name-text">RUMI</span>
+    <span class="reveal-role" id="reveal-role-text">K-POP DEMON HUNTER</span>
+  </div>
+
+  <!-- Scan hint -->
+  <div id="scan-hint">✦ POINTE VERS UN TOPPER DE GÂTEAU ✦</div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════
+     BOTTOM UI — CAPTURE
+══════════════════════════════════════════════════════ -->
+<div id="bottom-ui">
+  <div class="capture-ring" onclick="capturePhoto()" id="capture-btn">
+    <div class="capture-dot" id="capture-dot"></div>
+  </div>
+</div>
+
+<!-- EFFECTS -->
+<div id="flash"></div>
+<div id="saved-notif">📸 Photo sauvegardée !</div>
+<div id="error-banner" id="error-banner"></div>
+
+
+<!-- ═══════════════════════════════════════════════════
+     JAVASCRIPT
+══════════════════════════════════════════════════════ -->
+<script>
+/* ======================================================
+   CONSTANTS
+====================================================== */
+const CHARS = [
+  {
+    index: 0,
+    id: 'mira',
+    name: 'MIRA',
+    role: 'The Blade Dancer',
+    color: '#FF2D9B',
+    glow: 'rgba(255,45,155,0.8)',
+    glowHex: '#FF2D9B',
+    particleColors: ['#FF2D9B', '#FF69B4', '#FFD700', '#FF99CC', '#fff'],
+    imgSrc: 'assets/Mira.png',
+    texId: 'tex-mira',
+    // Mira image ratio h/w = 0.896 (landscape-ish)
+    planeW: 1.6, planeH: 1.434,
+  },
+  {
+    index: 1,
+    id: 'rumi',
+    name: 'RUMI',
+    role: 'The Shadow Sword',
+    color: '#8B2FFF',
+    glow: 'rgba(139,47,255,0.8)',
+    glowHex: '#8B2FFF',
+    particleColors: ['#8B2FFF', '#B97AFF', '#FFD700', '#CC99FF', '#fff'],
+    imgSrc: 'assets/Rumi.png',
+    texId: 'tex-rumi',
+    // Rumi image ratio h/w = 2.314
+    planeW: 1.0, planeH: 2.314,
+  },
+  {
+    index: 2,
+    id: 'zoey',
+    name: 'ZOEY',
+    role: 'The Crystal Mage',
+    color: '#00E5FF',
+    glow: 'rgba(0,229,255,0.8)',
+    glowHex: '#00E5FF',
+    particleColors: ['#00E5FF', '#00BFFF', '#7FFFAA', '#B0FFFF', '#fff'],
+    imgSrc: 'assets/Zoey.png',
+    texId: 'tex-zoey',
+    // Zoey image ratio h/w = 2.397
+    planeW: 1.0, planeH: 2.397,
+  },
+];
+
+/* ======================================================
+   APP STATE
+====================================================== */
+const APP = {
+  currentChar: null,
+  particles: [],
+  particleInterval: null,
+  animId: null,
+  sceneReady: false,
+};
+
+/* ======================================================
+   INDEXED DB CACHE
+====================================================== */
+const DB_NAME = 'huntrx-ar-v2';
+const STORE   = 'mind-data';
+const CACHE_KEY = 'targets-compiled';
+
+function openDB() {
+  return new Promise((res, rej) => {
+    const r = indexedDB.open(DB_NAME, 1);
+    r.onupgradeneeded = e => e.target.result.createObjectStore(STORE);
+    r.onsuccess = e => res(e.target.result);
+    r.onerror   = e => rej(e.target.error);
+  });
+}
+
+async function cacheGet(key) {
+  const db = await openDB();
+  return new Promise((res, rej) => {
+    const tx = db.transaction(STORE, 'readonly');
+    const req = tx.objectStore(STORE).get(key);
+    req.onsuccess = () => res(req.result ?? null);
+    req.onerror   = () => rej(req.error);
+  });
+}
+
+async function cachePut(key, data) {
+  const db = await openDB();
+  return new Promise((res, rej) => {
+    const tx = db.transaction(STORE, 'readwrite');
+    const req = tx.objectStore(STORE).put(data, key);
+    req.onsuccess = () => res();
+    req.onerror   = () => rej(req.error);
+  });
+}
+
+/* ======================================================
+   PARTICLE SYSTEM
+====================================================== */
+const pCanvas = document.getElementById('particle-canvas');
+const pCtx = pCanvas.getContext('2d');
+
+function resizePCanvas() {
+  pCanvas.width  = window.innerWidth;
+  pCanvas.height = window.innerHeight;
+}
+window.addEventListener('resize', resizePCanvas);
+resizePCanvas();
+
+class Spark {
+  constructor(colors) {
+    this.reset(colors);
+  }
+  reset(colors) {
+    this.x  = Math.random() * pCanvas.width;
+    this.y  = pCanvas.height * 0.3 + Math.random() * pCanvas.height * 0.5;
+    this.vx = (Math.random() - 0.5) * 2.5;
+    this.vy = -(Math.random() * 4 + 1.5);
+    this.r  = Math.random() * 5 + 2;
+    this.life = 1.0;
+    this.decay = Math.random() * 0.018 + 0.007;
+    this.color = colors[Math.floor(Math.random() * colors.length)];
+    this.shape = Math.random() > 0.5 ? 'star' : 'circle';
+    this.rot = Math.random() * Math.PI * 2;
+    this.rotV = (Math.random() - 0.5) * 0.15;
+  }
+  update() {
+    this.x += this.vx;
+    this.y += this.vy;
+    this.vy += 0.04; // gentle gravity
+    this.life -= this.decay;
+    this.r *= 0.992;
+    this.rot += this.rotV;
+  }
+  draw() {
+    if (this.life <= 0) return;
+    pCtx.save();
+    pCtx.globalAlpha = Math.max(0, this.life);
+    pCtx.shadowBlur = 14;
+    pCtx.shadowColor = this.color;
+    pCtx.fillStyle = this.color;
+    pCtx.translate(this.x, this.y);
+    pCtx.rotate(this.rot);
+    if (this.shape === 'star') {
+      drawStar(pCtx, 0, 0, 4, this.r, this.r * 0.45);
+    } else {
+      pCtx.beginPath();
+      pCtx.arc(0, 0, this.r, 0, Math.PI * 2);
+      pCtx.fill();
+    }
+    pCtx.restore();
+  }
+}
+
+function drawStar(ctx, cx, cy, spikes, outerR, innerR) {
+  let rot = -Math.PI / 2;
+  const step = Math.PI / spikes;
+  ctx.beginPath();
+  ctx.moveTo(cx + Math.cos(rot) * outerR, cy + Math.sin(rot) * outerR);
+  for (let i = 0; i < spikes * 2; i++) {
+    rot += step;
+    const r = i % 2 === 0 ? innerR : outerR;
+    ctx.lineTo(cx + Math.cos(rot) * r, cy + Math.sin(rot) * r);
+  }
+  ctx.closePath();
+  ctx.fill();
+}
+
+function animateParticles() {
+  pCtx.clearRect(0, 0, pCanvas.width, pCanvas.height);
+  APP.particles = APP.particles.filter(p => p.life > 0);
+  APP.particles.forEach(p => { p.update(); p.draw(); });
+  APP.animId = requestAnimationFrame(animateParticles);
+}
+
+function startParticles(char) {
+  stopParticles();
+  animateParticles();
+  APP.particleInterval = setInterval(() => {
+    for (let i = 0; i < 3; i++) {
+      APP.particles.push(new Spark(char.particleColors));
+    }
+  }, 80);
+}
+
+function stopParticles() {
+  clearInterval(APP.particleInterval);
+  if (APP.animId) { cancelAnimationFrame(APP.animId); APP.animId = null; }
+  pCtx.clearRect(0, 0, pCanvas.width, pCanvas.height);
+  APP.particles = [];
+}
+
+/* ======================================================
+   UI HELPERS
+====================================================== */
+function showScreen(id) {
+  ['splash','compile-screen'].forEach(s => {
+    document.getElementById(s).style.display = s === id ? 'flex' : 'none';
+  });
+}
+
+function setProgress(pct, msg) {
+  document.getElementById('progress-fill').style.width = pct + '%';
+  document.getElementById('progress-pct').textContent   = Math.round(pct) + '%';
+  if (msg) document.getElementById('compile-msg').textContent = msg;
+}
+
+function showError(msg) {
+  document.getElementById('compile-msg').textContent = '❌ ' + msg;
+  document.getElementById('progress-pct').textContent = '';
+  document.getElementById('compile-note').style.display = 'none';
+  document.getElementById('retry-btn').style.display = 'inline-block';
+  console.error('[HuntrX AR]', msg);
+}
+
+function retryCompile() {
+  document.getElementById('retry-btn').style.display = 'none';
+  document.getElementById('compile-note').style.display = 'block';
+  document.getElementById('compile-msg').textContent = 'Réessai en cours...';
+  document.getElementById('progress-fill').style.width = '0%';
+  // Clear cache and retry
+  cacheGet(CACHE_KEY).then(() => {
+    openDB().then(db => {
+      db.transaction(STORE, 'readwrite').objectStore(STORE).delete(CACHE_KEY);
+    }).then(() => compileAndLaunch());
+  }).catch(() => compileAndLaunch());
+}
+
+function showARMode() {
+  document.getElementById('ar-ui').style.display = 'block';
+  document.getElementById('bottom-ui').style.display = 'flex';
+  pCanvas.style.display = 'block';
+  document.getElementById('ar-container').style.display = 'block';
+}
+
+/* ======================================================
+   TARGET FOUND / LOST
+====================================================== */
+function onTargetFound(char) {
+  APP.currentChar = char;
+
+  // Hide scan frame
+  document.getElementById('scan-frame').style.opacity = '0';
+
+  // Reveal name
+  const reveal = document.getElementById('char-name-reveal');
+  const nameEl = document.getElementById('reveal-name-text');
+  const roleEl = document.getElementById('reveal-role-text');
+
+  nameEl.textContent = char.name;
+  nameEl.style.cssText = `
+    color: ${char.color};
+    text-shadow:
+      0 0 20px ${char.color},
+      0 0 40px ${char.color},
+      0 0 80px ${char.glowHex}88;
+  `;
+  roleEl.style.color = 'rgba(255,255,255,0.7)';
+  roleEl.textContent = char.role.toUpperCase();
+
+  reveal.style.animation = 'none';
+  reveal.offsetHeight; // reflow
+  reveal.style.animation = 'nameIn 0.4s ease-out forwards';
+  reveal.classList.add('visible');
+
+  // Scan hint
+  const hint = document.getElementById('scan-hint');
+  hint.innerHTML = `✦ ${char.name} DETECTED ✦`;
+  hint.style.color = char.color;
+  hint.style.textShadow = `0 0 15px ${char.color}`;
+
+  // Capture dot color
+  document.getElementById('capture-dot').style.background =
+    `radial-gradient(circle, #fff 0%, ${char.color} 100%)`;
+
+  // Start particles
+  startParticles(char);
+}
+
+function onTargetLost() {
+  APP.currentChar = null;
+
+  // Show scan frame
+  document.getElementById('scan-frame').style.opacity = '1';
+
+  // Hide name
+  document.getElementById('char-name-reveal').classList.remove('visible');
+  document.getElementById('char-name-reveal').style.animation = '';
+
+  // Reset hint
+  const hint = document.getElementById('scan-hint');
+  hint.innerHTML = '✦ POINTE VERS UN TOPPER DE GÂTEAU ✦';
+  hint.style.color = 'rgba(255,255,255,0.7)';
+  hint.style.textShadow = 'none';
+
+  // Reset capture dot
+  document.getElementById('capture-dot').style.background =
+    'radial-gradient(circle, #fff 0%, rgba(255,255,255,0.8) 100%)';
+
+  // Stop particles
+  stopParticles();
+}
+
+/* ======================================================
+   A-FRAME SCENE BUILDER
+====================================================== */
+function buildScene(blobUrl) {
+  const container = document.getElementById('ar-container');
+
+  // Assets HTML
+  const assetsHTML = CHARS.map(c =>
+    `<img id="${c.texId}" src="${c.imgSrc}" crossorigin="anonymous">`
+  ).join('\n    ');
+
+  // Per-character target entity HTML
+  const targetsHTML = CHARS.map(c => {
+    const glowOpacity = 0.18;
+    const hRatio = c.planeH / c.planeW;
+
+    return `
+  <!-- TARGET: ${c.name} -->
+  <a-entity id="entity-${c.id}" mindar-image-target="targetIndex: ${c.index}">
+
+    <!-- Outer glow plane -->
+    <a-plane
+      width="${c.planeW * 1.25}" height="${c.planeH * 1.25}"
+      position="0 0 -0.005"
+      material="color: ${c.color}; transparent: true; opacity: ${glowOpacity}; shader: flat; depthTest: false"
+      animation__scale="property: scale; from: 1 1 1; to: 1.04 1.04 1; dir: alternate; dur: 1800; loop: true; easing: easeInOutSine"
+      animation__opacity="property: material.opacity; from: ${glowOpacity}; to: ${glowOpacity * 0.5}; dir: alternate; dur: 2200; loop: true; easing: easeInOutSine">
+    </a-plane>
+
+    <!-- Inner glow ring -->
+    <a-ring
+      radius-inner="${Math.max(c.planeW, c.planeH) * 0.55}"
+      radius-outer="${Math.max(c.planeW, c.planeH) * 0.65}"
+      position="0 0 0"
+      material="color: ${c.color}; transparent: true; opacity: 0.4; shader: flat; side: double"
+      animation__rot="property: rotation; from: 0 0 0; to: 0 0 360; dur: 6000; loop: true; easing: linear"
+      animation__opacity="property: material.opacity; from: 0.1; to: 0.5; dir: alternate; dur: 1500; loop: true">
+    </a-ring>
+
+    <!-- Character plane (animated) -->
+    <a-plane
+      id="char-plane-${c.id}"
+      src="#${c.texId}"
+      width="${c.planeW}" height="${c.planeH}"
+      position="0 0 0.002"
+      material="transparent: true; alphaTest: 0.05; shader: flat; depthTest: false"
+      animation__float="property: position; from: 0 -0.02 0.002; to: 0 0.05 0.002; dir: alternate; dur: 2200; loop: true; easing: easeInOutSine"
+      animation__scale="property: scale; from: 1 1 1; to: 1.03 1.03 1; dir: alternate; dur: 2800; loop: true; easing: easeInOutSine">
+    </a-plane>
+
+    <!-- Name text (above character) -->
+    <a-text
+      value="${c.name}"
+      align="center"
+      color="${c.color}"
+      position="0 ${c.planeH * 0.58} 0.003"
+      scale="1.8 1.8 1.8"
+      animation__float="property: position; from: 0 ${c.planeH * 0.55} 0.003; to: 0 ${c.planeH * 0.62} 0.003; dir: alternate; dur: 2500; loop: true; easing: easeInOutSine">
+    </a-text>
+
+    <!-- Energy orbs rotating around character -->
+    <a-entity
+      animation__rot="property: rotation; from: 0 0 0; to: 0 0 360; dur: 4000; loop: true; easing: linear">
+      <a-sphere
+        position="${Math.max(c.planeW, c.planeH) * 0.62} 0 0.01"
+        radius="0.07"
+        material="color: ${c.color}; transparent: true; opacity: 0.85; shader: flat; emissive: ${c.color}; emissiveIntensity: 1"
+        animation__pulse="property: scale; from: 1 1 1; to: 1.5 1.5 1.5; dir: alternate; dur: 800; loop: true; easing: easeInOutSine">
+      </a-sphere>
+    </a-entity>
+    <a-entity
+      animation__rot="property: rotation; from: 0 0 60; to: 0 0 420; dur: 4000; loop: true; easing: linear">
+      <a-sphere
+        position="${Math.max(c.planeW, c.planeH) * 0.62} 0 0.01"
+        radius="0.05"
+        material="color: #FFD700; transparent: true; opacity: 0.75; shader: flat; emissive: #FFD700; emissiveIntensity: 1"
+        animation__pulse="property: scale; from: 1 1 1; to: 1.4 1.4 1.4; dir: alternate; dur: 1000; loop: true; easing: easeInOutSine">
+      </a-sphere>
+    </a-entity>
+
+  </a-entity>`;
+  }).join('\n');
+
+  // Build full scene HTML
+  const sceneHTML = `
+<a-scene
+  id="ar-scene"
+  mindar-image="imageTargetSrc: ${blobUrl}; autoStart: false; uiLoading: no; uiScanning: no; uiError: no; filterMinCF: 0.001; filterBeta: 0.001; maxTrack: 1"
+  color-space="sRGB"
+  renderer="colorManagement: true; physicallyCorrectLights: false; antialias: true; alpha: true"
+  vr-mode-ui="enabled: false"
+  device-orientation-permission-ui="enabled: false"
+  embedded>
+
+  <a-assets timeout="10000">
+    ${assetsHTML}
+  </a-assets>
+
+  <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
+
+  ${targetsHTML}
+
+</a-scene>`;
+
+  container.innerHTML = sceneHTML;
+
+  const sceneEl = document.getElementById('ar-scene');
+
+  return new Promise((resolve, reject) => {
+    const onLoaded = async () => {
+      try {
+        const system = sceneEl.systems['mindar-image-system'];
+        await system.start();
+        resolve(sceneEl);
+      } catch (e) { reject(e); }
+    };
+
+    if (sceneEl.hasLoaded) {
+      onLoaded();
+    } else {
+      sceneEl.addEventListener('loaded', onLoaded, { once: true });
+    }
+
+    setTimeout(() => reject(new Error('Scene load timeout (15s)')), 15000);
+  });
+}
+
+/* ======================================================
+   MAIN APP FLOW
+====================================================== */
+async function startApp() {
+  document.getElementById('splash').style.display = 'none';
+  document.getElementById('compile-screen').style.display = 'flex';
+
+  // Request camera permissions early
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+    stream.getTracks().forEach(t => t.stop());
+  } catch (e) {
+    showError('Permission caméra refusée. Autorisez la caméra et réessayez.');
+    return;
+  }
+
+  await compileAndLaunch();
+}
+
+async function compileAndLaunch() {
+  try {
+    // 1. Check cache
+    let mindBuffer = null;
+    try {
+      mindBuffer = await cacheGet(CACHE_KEY);
+    } catch (e) { /* ignore cache errors */ }
+
+    if (mindBuffer) {
+      setProgress(100, '✨ Chargé depuis le cache !');
+      await new Promise(r => setTimeout(r, 600));
+    } else {
+      // 2. Compile
+      mindBuffer = await compileTargets();
+      // 3. Save to cache
+      try { await cachePut(CACHE_KEY, mindBuffer); } catch (e) { /* non-fatal */ }
+    }
+
+    // 4. Create blob URL
+    setProgress(100, 'Lancement de la caméra...');
+    const blob   = new Blob([mindBuffer]);
+    const blobUrl = URL.createObjectURL(blob);
+
+    // 5. Build and start A-Frame scene
+    const sceneEl = await buildScene(blobUrl);
+
+    // 6. Register target events
+    CHARS.forEach(char => {
+      const el = document.getElementById(`entity-${char.id}`);
+      if (!el) return;
+      el.addEventListener('targetFound', () => onTargetFound(char));
+      el.addEventListener('targetLost',  () => onTargetLost());
+    });
+
+    // 7. Show AR UI
+    document.getElementById('compile-screen').style.display = 'none';
+    showARMode();
+    APP.sceneReady = true;
+
+  } catch (err) {
+    showError(err.message || 'Erreur inattendue. Vérifiez votre connexion et réessayez.');
+  }
+}
+
+async function loadImg(src) {
+  return new Promise((res, rej) => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => res(img);
+    img.onerror = () => rej(new Error(`Impossible de charger ${src}`));
+    img.src = src;
+  });
+}
+
+async function compileTargets() {
+  setProgress(2, 'Chargement des personnages...');
+
+  const [miraImg, rumiImg, zoeyImg] = await Promise.all(
+    CHARS.map(c => loadImg(c.imgSrc))
+  );
+
+  setProgress(8, 'Compilation AR en cours... (~30s)');
+
+  const compiler = new MINDAR.IMAGE.Compiler();
+  const buffer = await compiler.compileImageTargets(
+    [miraImg, rumiImg, zoeyImg],
+    progress => setProgress(8 + progress * 0.88, `Compilation... ${Math.round(progress)}%`)
+  );
+
+  const exported = await compiler.exportData();
+  setProgress(98, 'Finalisation...');
+  return exported;
+}
+
+/* ======================================================
+   PHOTO CAPTURE
+====================================================== */
+async function capturePhoto() {
+  if (!APP.sceneReady) return;
+
+  // Flash
+  const flash = document.getElementById('flash');
+  flash.style.transition = 'none';
+  flash.style.opacity = '1';
+  setTimeout(() => {
+    flash.style.transition = 'opacity 0.35s ease-out';
+    flash.style.opacity = '0';
+  }, 80);
+
+  try {
+    const composite = document.createElement('canvas');
+    const video = document.querySelector('#ar-container video');
+
+    if (!video) throw new Error('Flux vidéo introuvable');
+
+    composite.width  = video.videoWidth  || window.innerWidth;
+    composite.height = video.videoHeight || window.innerHeight;
+    const ctx = composite.getContext('2d');
+
+    // 1. Draw camera frame
+    ctx.drawImage(video, 0, 0, composite.width, composite.height);
+
+    // 2. Draw A-Frame WebGL canvas
+    const glCanvas = document.querySelector('#ar-container canvas');
+    if (glCanvas) {
+      // Force preserveDrawingBuffer - need to re-render one frame
+      ctx.drawImage(glCanvas, 0, 0, composite.width, composite.height);
+    }
+
+    // 3. Draw particles
+    ctx.drawImage(pCanvas, 0, 0, composite.width, composite.height);
+
+    // 4. Watermark
+    const charName = APP.currentChar ? APP.currentChar.name : '';
+    if (charName) {
+      ctx.save();
+      ctx.font = `bold ${Math.round(composite.height * 0.055)}px HuntersKPop, sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.globalAlpha = 0.85;
+      ctx.fillStyle = APP.currentChar.color;
+      ctx.shadowBlur = 20;
+      ctx.shadowColor = APP.currentChar.color;
+      ctx.fillText('HuntrX — ' + charName, composite.width / 2, composite.height * 0.08);
+      ctx.restore();
+    }
+
+    // 5. Download
+    const filename = `huntrx-${charName.toLowerCase() || 'ar'}-${Date.now()}.png`;
+    composite.toBlob(blob => {
+      const url = URL.createObjectURL(blob);
+      const a   = document.createElement('a');
+      a.href     = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }, 'image/png');
+
+    // Notification
+    const notif = document.getElementById('saved-notif');
+    notif.style.opacity = '1';
+    setTimeout(() => notif.style.opacity = '0', 2500);
+
+  } catch (err) {
+    console.error('[Capture]', err);
+    // Fallback: capture just the scene canvas
+    const glCanvas = document.querySelector('#ar-container canvas');
+    if (glCanvas) {
+      const url = glCanvas.toDataURL('image/png');
+      const a   = document.createElement('a');
+      a.href     = url;
+      a.download = `huntrx-${Date.now()}.png`;
+      a.click();
+    }
+  }
+}
+
+/* ======================================================
+   PRESERVE DRAWING BUFFER FOR SCREENSHOT
+====================================================== */
+// A-Frame disables preserveDrawingBuffer by default.
+// Override renderer init to enable it.
+AFRAME.registerComponent('preserve-drawing-buffer', {
+  init() {
+    const renderer = this.el.renderer;
+    if (renderer) renderer.preserveDrawingBuffer = true;
+  }
+});
+
+// Patch scene attributes after injection
+document.addEventListener('DOMContentLoaded', () => {});
+
+</script>
+</body>
+</html>
