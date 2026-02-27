@@ -497,6 +497,146 @@
 
     #retry-btn:hover { background: rgba(255,45,155,0.4); box-shadow: 0 0 20px rgba(255,45,155,0.5); }
 
+    /* ===================================================
+       SQUAD MODE OVERLAY
+    =================================================== */
+    #squad-overlay {
+      position: fixed; inset: 0;
+      pointer-events: none;
+      z-index: 150;
+      display: none;
+    }
+
+    /* Animated rainbow border */
+    #squad-border {
+      position: absolute; inset: 0;
+      border: 4px solid transparent;
+      animation: squadBorder 1.2s linear infinite;
+    }
+
+    @keyframes squadBorder {
+      0%   { box-shadow: inset 0 0 0 4px #FF2D9B, 0 0 30px #FF2D9B, inset 0 0 60px rgba(255,45,155,0.15); }
+      33%  { box-shadow: inset 0 0 0 4px #8B2FFF, 0 0 30px #8B2FFF, inset 0 0 60px rgba(139,47,255,0.15); }
+      66%  { box-shadow: inset 0 0 0 4px #00E5FF, 0 0 30px #00E5FF, inset 0 0 60px rgba(0,229,255,0.15); }
+      100% { box-shadow: inset 0 0 0 4px #FF2D9B, 0 0 30px #FF2D9B, inset 0 0 60px rgba(255,45,155,0.15); }
+    }
+
+    /* Squad title */
+    #squad-title-wrap {
+      position: absolute;
+      top: 10%;
+      left: 50%; transform: translateX(-50%);
+      text-align: center;
+      animation: squadIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) both;
+    }
+
+    @keyframes squadIn {
+      from { opacity: 0; transform: translateX(-50%) scale(0.4) rotate(-5deg); }
+      to   { opacity: 1; transform: translateX(-50%) scale(1) rotate(0deg); }
+    }
+
+    .squad-label {
+      display: block;
+      font-size: clamp(0.55rem, 2.5vw, 0.75rem);
+      letter-spacing: 7px;
+      color: rgba(255,255,255,0.8);
+      margin-bottom: 0.3rem;
+    }
+
+    .squad-main {
+      display: block;
+      font-size: clamp(2.8rem, 14vw, 5.5rem);
+      line-height: 0.9;
+      letter-spacing: 3px;
+      background: linear-gradient(135deg, #FF2D9B 0%, #FFD700 40%, #8B2FFF 65%, #00E5FF 100%);
+      background-size: 300% 300%;
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      animation: squadGradShift 2s linear infinite, squadPulse 1.8s ease-in-out infinite;
+      filter: drop-shadow(0 0 20px rgba(255,215,0,0.6));
+    }
+
+    @keyframes squadGradShift {
+      0%   { background-position: 0% 50%; }
+      50%  { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+
+    @keyframes squadPulse {
+      0%, 100% { filter: drop-shadow(0 0 15px rgba(255,45,155,0.7)); }
+      33%       { filter: drop-shadow(0 0 25px rgba(139,47,255,0.9)); }
+      66%       { filter: drop-shadow(0 0 25px rgba(0,229,255,0.9)); }
+    }
+
+    .squad-subtitle {
+      display: block;
+      font-size: clamp(0.5rem, 2vw, 0.65rem);
+      letter-spacing: 5px;
+      color: rgba(255,255,255,0.6);
+      margin-top: 0.4rem;
+    }
+
+    /* Corner lightning bolts */
+    .squad-bolt {
+      position: absolute;
+      font-size: clamp(1.8rem, 7vw, 3rem);
+      animation: boltFlash 0.6s ease-in-out infinite alternate;
+    }
+
+    .squad-bolt.tl { top: 5%; left: 4%; animation-delay: 0s; }
+    .squad-bolt.tr { top: 5%; right: 4%; animation-delay: 0.2s; }
+    .squad-bolt.bl { bottom: 5%; left: 4%; animation-delay: 0.4s; }
+    .squad-bolt.br { bottom: 5%; right: 4%; animation-delay: 0.1s; }
+
+    @keyframes boltFlash {
+      from { opacity: 0.3; transform: scale(0.8); filter: drop-shadow(0 0 5px #FFD700); }
+      to   { opacity: 1.0; transform: scale(1.2); filter: drop-shadow(0 0 18px #FFD700); }
+    }
+
+    /* Members row at bottom */
+    #squad-members {
+      position: absolute;
+      bottom: 18%;
+      left: 50%; transform: translateX(-50%);
+      display: flex;
+      gap: clamp(1rem, 6vw, 3rem);
+      align-items: center;
+    }
+
+    .squad-member-dot {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.3rem;
+      animation: memberBounce 1.2s ease-in-out infinite;
+    }
+
+    .squad-member-dot:nth-child(1) { animation-delay: 0s; }
+    .squad-member-dot:nth-child(2) { animation-delay: 0.15s; }
+    .squad-member-dot:nth-child(3) { animation-delay: 0.3s; }
+
+    @keyframes memberBounce {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-8px); }
+    }
+
+    .member-circle {
+      width: clamp(28px, 7vw, 42px);
+      height: clamp(28px, 7vw, 42px);
+      border-radius: 50%;
+      border: 2px solid currentColor;
+      display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 0 15px currentColor, 0 0 30px currentColor;
+    }
+
+    .member-circle svg { width: 55%; height: 55%; }
+
+    .member-name-sm {
+      font-size: clamp(0.5rem, 2vw, 0.65rem);
+      letter-spacing: 3px;
+    }
+
   </style>
 </head>
 <body>
@@ -591,6 +731,42 @@
   </div>
 </div>
 
+<!-- ═══════════════════════════════════════════════════
+     SQUAD MODE OVERLAY (all 3 detected)
+══════════════════════════════════════════════════════ -->
+<div id="squad-overlay">
+  <div id="squad-border"></div>
+  <span class="squad-bolt tl">⚡</span>
+  <span class="squad-bolt tr">⚡</span>
+  <span class="squad-bolt bl">⚡</span>
+  <span class="squad-bolt br">⚡</span>
+  <div id="squad-title-wrap">
+    <span class="squad-label">✦ SQUAD COMPLET ✦</span>
+    <span class="squad-main">HuntrX</span>
+    <span class="squad-subtitle">DEMON HUNTERS UNLOCKED</span>
+  </div>
+  <div id="squad-members">
+    <div class="squad-member-dot">
+      <div class="member-circle" style="color:#FF2D9B">
+        <svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+      </div>
+      <span class="member-name-sm" style="color:#FF2D9B">MIRA</span>
+    </div>
+    <div class="squad-member-dot">
+      <div class="member-circle" style="color:#8B2FFF">
+        <svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+      </div>
+      <span class="member-name-sm" style="color:#8B2FFF">RUMI</span>
+    </div>
+    <div class="squad-member-dot">
+      <div class="member-circle" style="color:#00E5FF">
+        <svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+      </div>
+      <span class="member-name-sm" style="color:#00E5FF">ZOEY</span>
+    </div>
+  </div>
+</div>
+
 <!-- EFFECTS -->
 <div id="flash"></div>
 <div id="saved-notif">📸 Photo sauvegardée !</div>
@@ -654,10 +830,13 @@ const CHARS = [
 ====================================================== */
 const APP = {
   currentChar: null,
+  foundTargets: new Set(),   // set of char ids currently visible
+  squadMode: false,          // true when all 3 are visible
   particles: [],
   particleInterval: null,
   animId: null,
   sceneReady: false,
+  glowTextures: {},          // charId -> data URL of silhouette glow
 };
 
 /* ======================================================
@@ -836,9 +1015,62 @@ function showARMode() {
 }
 
 /* ======================================================
+   SILHOUETTE GLOW TEXTURE GENERATOR
+   Draws the character with a blurred tinted halo
+   that perfectly follows its transparent contours
+====================================================== */
+async function buildGlowTexture(imgSrc, color, blurPx = 18) {
+  const img = await loadImg(imgSrc);
+
+  // Step 1: create blurred silhouette canvas
+  const c1 = document.createElement('canvas');
+  c1.width  = img.naturalWidth;
+  c1.height = img.naturalHeight;
+  const x1  = c1.getContext('2d');
+
+  // Draw slightly enlarged to create outward glow
+  const pad = blurPx * 2;
+  c1.width  += pad * 2;
+  c1.height += pad * 2;
+
+  x1.filter = `blur(${blurPx}px)`;
+  x1.drawImage(img, pad, pad, img.naturalWidth, img.naturalHeight);
+
+  // Step 2: tint the blurred result with character color
+  x1.filter = 'none';
+  x1.globalCompositeOperation = 'source-atop';
+  x1.fillStyle = color;
+  x1.fillRect(0, 0, c1.width, c1.height);
+
+  // Step 3: second pass — stronger center glow
+  x1.globalCompositeOperation = 'source-over';
+  x1.globalAlpha = 0.45;
+  x1.filter = `blur(${blurPx * 0.5}px)`;
+  x1.drawImage(img, pad, pad, img.naturalWidth, img.naturalHeight);
+  x1.filter = 'none';
+  x1.globalAlpha = 1;
+  x1.globalCompositeOperation = 'source-atop';
+  x1.fillStyle = color;
+  x1.fillRect(0, 0, c1.width, c1.height);
+
+  return { dataUrl: c1.toDataURL('image/png'), padRatio: pad / img.naturalWidth };
+}
+
+/* ======================================================
    TARGET FOUND / LOST
 ====================================================== */
 function onTargetFound(char) {
+  APP.foundTargets.add(char.id);
+
+  // If squad mode just completed — handle specially
+  if (APP.foundTargets.size === 3 && !APP.squadMode) {
+    enterSquadMode();
+    return;
+  }
+
+  // If already in squad mode, do nothing extra
+  if (APP.squadMode) return;
+
   APP.currentChar = char;
 
   // Hide scan frame
@@ -861,7 +1093,7 @@ function onTargetFound(char) {
   roleEl.textContent = char.role.toUpperCase();
 
   reveal.style.animation = 'none';
-  reveal.offsetHeight; // reflow
+  reveal.offsetHeight;
   reveal.style.animation = 'nameIn 0.4s ease-out forwards';
   reveal.classList.add('visible');
 
@@ -879,28 +1111,159 @@ function onTargetFound(char) {
   startParticles(char);
 }
 
-function onTargetLost() {
+function onTargetLost(char) {
+  APP.foundTargets.delete(char.id);
+
+  // Exit squad mode if we were in it
+  if (APP.squadMode) {
+    exitSquadMode();
+    // If one char still visible, re-trigger its state
+    if (APP.foundTargets.size > 0) {
+      const stillVisible = CHARS.find(c => APP.foundTargets.has(c.id));
+      if (stillVisible) onTargetFound(stillVisible);
+    }
+    return;
+  }
+
+  if (APP.foundTargets.size > 0) {
+    // Another char may still be visible — switch to it
+    const stillVisible = CHARS.find(c => APP.foundTargets.has(c.id));
+    if (stillVisible && stillVisible.id !== APP.currentChar?.id) {
+      APP.currentChar = null;
+      onTargetFound(stillVisible);
+    }
+    return;
+  }
+
+  // Nothing visible
   APP.currentChar = null;
 
-  // Show scan frame
   document.getElementById('scan-frame').style.opacity = '1';
-
-  // Hide name
   document.getElementById('char-name-reveal').classList.remove('visible');
   document.getElementById('char-name-reveal').style.animation = '';
 
-  // Reset hint
   const hint = document.getElementById('scan-hint');
   hint.innerHTML = '✦ POINTE VERS UN TOPPER DE GÂTEAU ✦';
   hint.style.color = 'rgba(255,255,255,0.7)';
   hint.style.textShadow = 'none';
 
-  // Reset capture dot
   document.getElementById('capture-dot').style.background =
     'radial-gradient(circle, #fff 0%, rgba(255,255,255,0.8) 100%)';
 
-  // Stop particles
   stopParticles();
+}
+
+/* ======================================================
+   SQUAD MODE
+====================================================== */
+const SQUAD_COLORS = ['#FF2D9B','#8B2FFF','#00E5FF','#FFD700'];
+
+function enterSquadMode() {
+  APP.squadMode = true;
+  APP.currentChar = null;
+
+  // Hide single-char UI
+  document.getElementById('char-name-reveal').classList.remove('visible');
+  document.getElementById('scan-frame').style.opacity = '0';
+
+  const hint = document.getElementById('scan-hint');
+  hint.innerHTML = '✦ SQUAD COMPLET ✦';
+  hint.style.background = 'linear-gradient(90deg, #FF2D9B, #8B2FFF, #00E5FF)';
+  hint.style.webkitBackgroundClip = 'text';
+  hint.style.webkitTextFillColor = 'transparent';
+
+  // Show squad overlay
+  const overlay = document.getElementById('squad-overlay');
+  overlay.style.display = 'block';
+  // Re-trigger title animation
+  const titleWrap = document.getElementById('squad-title-wrap');
+  titleWrap.style.animation = 'none';
+  titleWrap.offsetHeight;
+  titleWrap.style.animation = 'squadIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) both';
+
+  // Big multi-color particle burst
+  for (let i = 0; i < 80; i++) {
+    setTimeout(() => {
+      APP.particles.push(new SquadSpark(SQUAD_COLORS));
+    }, i * 18);
+  }
+
+  // Continuous mixed particles
+  stopParticles();
+  animateParticles();
+  APP.particleInterval = setInterval(() => {
+    for (let i = 0; i < 5; i++) APP.particles.push(new SquadSpark(SQUAD_COLORS));
+  }, 60);
+
+  // Capture dot — rainbow
+  document.getElementById('capture-dot').style.background =
+    'conic-gradient(#FF2D9B, #8B2FFF, #00E5FF, #FFD700, #FF2D9B)';
+}
+
+function exitSquadMode() {
+  APP.squadMode = false;
+  document.getElementById('squad-overlay').style.display = 'none';
+
+  const hint = document.getElementById('scan-hint');
+  hint.style.background = '';
+  hint.style.webkitBackgroundClip = '';
+  hint.style.webkitTextFillColor = '';
+  hint.innerHTML = '✦ POINTE VERS UN TOPPER DE GÂTEAU ✦';
+  hint.style.color = 'rgba(255,255,255,0.7)';
+  hint.style.textShadow = 'none';
+
+  stopParticles();
+}
+
+/* Squad spark — covers whole screen, faster & bigger */
+class SquadSpark {
+  constructor(colors) {
+    this.x  = Math.random() * pCanvas.width;
+    this.y  = Math.random() * pCanvas.height * 0.9;
+    this.vx = (Math.random() - 0.5) * 6;
+    this.vy = -(Math.random() * 7 + 2);
+    this.r  = Math.random() * 9 + 3;
+    this.life = 1.0;
+    this.decay = Math.random() * 0.012 + 0.006;
+    this.color = colors[Math.floor(Math.random() * colors.length)];
+    this.shape = ['star','circle','diamond'][Math.floor(Math.random()*3)];
+    this.rot = Math.random() * Math.PI * 2;
+    this.rotV = (Math.random() - 0.5) * 0.2;
+  }
+  update() {
+    this.x += this.vx;
+    this.y += this.vy;
+    this.vy += 0.06;
+    this.life -= this.decay;
+    this.r *= 0.993;
+    this.rot += this.rotV;
+  }
+  draw() {
+    if (this.life <= 0) return;
+    pCtx.save();
+    pCtx.globalAlpha = Math.max(0, this.life);
+    pCtx.shadowBlur = 22;
+    pCtx.shadowColor = this.color;
+    pCtx.fillStyle = this.color;
+    pCtx.translate(this.x, this.y);
+    pCtx.rotate(this.rot);
+    if (this.shape === 'star') {
+      drawStar(pCtx, 0, 0, 5, this.r, this.r * 0.4);
+    } else if (this.shape === 'diamond') {
+      pCtx.beginPath();
+      pCtx.moveTo(0, -this.r);
+      pCtx.lineTo(this.r * 0.6, 0);
+      pCtx.lineTo(0, this.r);
+      pCtx.lineTo(-this.r * 0.6, 0);
+      pCtx.closePath();
+      pCtx.fill();
+    } else {
+      pCtx.beginPath();
+      pCtx.arc(0, 0, this.r, 0, Math.PI * 2);
+      pCtx.fill();
+    }
+    pCtx.restore();
+  }
 }
 
 /* ======================================================
@@ -909,40 +1272,35 @@ function onTargetLost() {
 function buildScene(blobUrl) {
   const container = document.getElementById('ar-container');
 
-  // Assets HTML
-  const assetsHTML = CHARS.map(c =>
-    `<img id="${c.texId}" src="${c.imgSrc}" crossorigin="anonymous">`
-  ).join('\n    ');
+  // Assets HTML — character textures + pre-built glow textures
+  const assetsHTML = CHARS.map(c => `
+    <img id="${c.texId}" src="${c.imgSrc}" crossorigin="anonymous">
+    <img id="${c.texId}-glow" src="${APP.glowTextures[c.id]}" crossorigin="anonymous">
+  `).join('\n');
 
   // Per-character target entity HTML
   const targetsHTML = CHARS.map(c => {
-    const glowOpacity = 0.18;
-    const hRatio = c.planeH / c.planeW;
+    const orbitR = Math.max(c.planeW, c.planeH) * 0.62;
+    // Glow plane is slightly larger to account for blur padding
+    const glowW = c.planeW * 1.16;
+    const glowH = c.planeH * 1.16;
 
     return `
   <!-- TARGET: ${c.name} -->
   <a-entity id="entity-${c.id}" mindar-image-target="targetIndex: ${c.index}">
 
-    <!-- Outer glow plane -->
+    <!-- Silhouette contour glow (follows character shape, no round halo) -->
     <a-plane
-      width="${c.planeW * 1.25}" height="${c.planeH * 1.25}"
-      position="0 0 -0.005"
-      material="color: ${c.color}; transparent: true; opacity: ${glowOpacity}; shader: flat; depthTest: false"
-      animation__scale="property: scale; from: 1 1 1; to: 1.04 1.04 1; dir: alternate; dur: 1800; loop: true; easing: easeInOutSine"
-      animation__opacity="property: material.opacity; from: ${glowOpacity}; to: ${glowOpacity * 0.5}; dir: alternate; dur: 2200; loop: true; easing: easeInOutSine">
+      id="glow-plane-${c.id}"
+      src="#${c.texId}-glow"
+      width="${glowW}" height="${glowH}"
+      position="0 0 -0.003"
+      material="transparent: true; alphaTest: 0.01; shader: flat; depthTest: false; opacity: 0.75"
+      animation__opacGlow="property: material.opacity; from: 0.55; to: 0.85; dir: alternate; dur: 1600; loop: true; easing: easeInOutSine"
+      animation__scaleGlow="property: scale; from: 1 1 1; to: 1.04 1.04 1; dir: alternate; dur: 2000; loop: true; easing: easeInOutSine">
     </a-plane>
 
-    <!-- Inner glow ring -->
-    <a-ring
-      radius-inner="${Math.max(c.planeW, c.planeH) * 0.55}"
-      radius-outer="${Math.max(c.planeW, c.planeH) * 0.65}"
-      position="0 0 0"
-      material="color: ${c.color}; transparent: true; opacity: 0.4; shader: flat; side: double"
-      animation__rot="property: rotation; from: 0 0 0; to: 0 0 360; dur: 6000; loop: true; easing: linear"
-      animation__opacity="property: material.opacity; from: 0.1; to: 0.5; dir: alternate; dur: 1500; loop: true">
-    </a-ring>
-
-    <!-- Character plane (animated) -->
+    <!-- Character plane -->
     <a-plane
       id="char-plane-${c.id}"
       src="#${c.texId}"
@@ -953,51 +1311,54 @@ function buildScene(blobUrl) {
       animation__scale="property: scale; from: 1 1 1; to: 1.03 1.03 1; dir: alternate; dur: 2800; loop: true; easing: easeInOutSine">
     </a-plane>
 
-    <!-- Name text (above character) -->
-    <a-text
-      value="${c.name}"
-      align="center"
-      color="${c.color}"
-      position="0 ${c.planeH * 0.58} 0.003"
-      scale="1.8 1.8 1.8"
-      animation__float="property: position; from: 0 ${c.planeH * 0.55} 0.003; to: 0 ${c.planeH * 0.62} 0.003; dir: alternate; dur: 2500; loop: true; easing: easeInOutSine">
-    </a-text>
-
-    <!-- Energy orbs rotating around character -->
+    <!-- Orb 1 — character color, fast -->
     <a-entity
-      animation__rot="property: rotation; from: 0 0 0; to: 0 0 360; dur: 4000; loop: true; easing: linear">
+      animation__rot="property: rotation; from: 0 0 0; to: 0 0 360; dur: 3500; loop: true; easing: linear">
       <a-sphere
-        position="${Math.max(c.planeW, c.planeH) * 0.62} 0 0.01"
-        radius="0.07"
-        material="color: ${c.color}; transparent: true; opacity: 0.85; shader: flat; emissive: ${c.color}; emissiveIntensity: 1"
-        animation__pulse="property: scale; from: 1 1 1; to: 1.5 1.5 1.5; dir: alternate; dur: 800; loop: true; easing: easeInOutSine">
+        position="${orbitR} 0 0.01"
+        radius="0.075"
+        material="color: ${c.color}; transparent: true; opacity: 0.9; shader: flat; emissive: ${c.color}; emissiveIntensity: 1"
+        animation__pulse="property: scale; from: 1 1 1; to: 1.6 1.6 1; dir: alternate; dur: 750; loop: true; easing: easeInOutSine">
       </a-sphere>
     </a-entity>
+
+    <!-- Orb 2 — gold, medium -->
     <a-entity
-      animation__rot="property: rotation; from: 0 0 60; to: 0 0 420; dur: 4000; loop: true; easing: linear">
+      animation__rot="property: rotation; from: 0 0 60; to: 0 0 420; dur: 5000; loop: true; easing: linear">
       <a-sphere
-        position="${Math.max(c.planeW, c.planeH) * 0.62} 0 0.01"
-        radius="0.05"
-        material="color: #FFD700; transparent: true; opacity: 0.75; shader: flat; emissive: #FFD700; emissiveIntensity: 1"
-        animation__pulse="property: scale; from: 1 1 1; to: 1.4 1.4 1.4; dir: alternate; dur: 1000; loop: true; easing: easeInOutSine">
+        position="${orbitR * 0.85} 0 0.01"
+        radius="0.052"
+        material="color: #FFD700; transparent: true; opacity: 0.8; shader: flat; emissive: #FFD700; emissiveIntensity: 1"
+        animation__pulse="property: scale; from: 1 1 1; to: 1.5 1.5 1; dir: alternate; dur: 1000; loop: true; easing: easeInOutSine">
+      </a-sphere>
+    </a-entity>
+
+    <!-- Orb 3 — white small, counter-rotate -->
+    <a-entity
+      animation__rot="property: rotation; from: 0 0 0; to: 0 0 -360; dur: 4200; loop: true; easing: linear">
+      <a-sphere
+        position="${orbitR * 0.7} 0 0.015"
+        radius="0.032"
+        material="color: #ffffff; transparent: true; opacity: 0.7; shader: flat; emissive: #ffffff; emissiveIntensity: 1"
+        animation__pulse="property: scale; from: 0.8 0.8 0.8; to: 1.4 1.4 1.4; dir: alternate; dur: 600; loop: true; easing: easeInOutSine">
       </a-sphere>
     </a-entity>
 
   </a-entity>`;
   }).join('\n');
 
-  // Build full scene HTML
+  // Scene — maxTrack 3 to allow all characters simultaneously
   const sceneHTML = `
 <a-scene
   id="ar-scene"
-  mindar-image="imageTargetSrc: ${blobUrl}; autoStart: false; uiLoading: no; uiScanning: no; uiError: no; filterMinCF: 0.001; filterBeta: 0.001; maxTrack: 1"
+  mindar-image="imageTargetSrc: ${blobUrl}; autoStart: false; uiLoading: no; uiScanning: no; uiError: no; filterMinCF: 0.001; filterBeta: 0.001; maxTrack: 3"
   color-space="sRGB"
   renderer="colorManagement: true; physicallyCorrectLights: false; antialias: true; alpha: true"
   vr-mode-ui="enabled: false"
   device-orientation-permission-ui="enabled: false"
   embedded>
 
-  <a-assets timeout="10000">
+  <a-assets timeout="15000">
     ${assetsHTML}
   </a-assets>
 
@@ -1067,23 +1428,35 @@ async function compileAndLaunch() {
       try { await cachePut(CACHE_KEY, mindBuffer); } catch (e) { /* non-fatal */ }
     }
 
-    // 4. Create blob URL
+    // 4. Generate silhouette glow textures (before building scene)
+    setProgress(100, 'Génération des halos...');
+    for (const char of CHARS) {
+      try {
+        const { dataUrl } = await buildGlowTexture(char.imgSrc, char.color, 20);
+        APP.glowTextures[char.id] = dataUrl;
+      } catch (e) {
+        // Fallback: use character image as glow (less pretty but won't crash)
+        APP.glowTextures[char.id] = char.imgSrc;
+      }
+    }
+
+    // 5. Create blob URL
     setProgress(100, 'Lancement de la caméra...');
     const blob   = new Blob([mindBuffer]);
     const blobUrl = URL.createObjectURL(blob);
 
-    // 5. Build and start A-Frame scene
+    // 6. Build and start A-Frame scene
     const sceneEl = await buildScene(blobUrl);
 
-    // 6. Register target events
+    // 7. Register target events
     CHARS.forEach(char => {
       const el = document.getElementById(`entity-${char.id}`);
       if (!el) return;
       el.addEventListener('targetFound', () => onTargetFound(char));
-      el.addEventListener('targetLost',  () => onTargetLost());
+      el.addEventListener('targetLost',  () => onTargetLost(char));
     });
 
-    // 7. Show AR UI
+    // 8. Show AR UI
     document.getElementById('compile-screen').style.display = 'none';
     showARMode();
     APP.sceneReady = true;
