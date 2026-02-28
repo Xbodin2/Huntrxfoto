@@ -637,6 +637,70 @@
       letter-spacing: 3px;
     }
 
+
+    /* ===================================================
+       iOS SAVE INSTRUCTION OVERLAY
+    =================================================== */
+    #ios-save-overlay {
+      position: fixed; inset: 0;
+      background: rgba(3,0,8,0.92);
+      z-index: 980;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      backdrop-filter: blur(10px);
+      padding: 2rem;
+    }
+    #ios-save-overlay.visible { display: flex; }
+
+    #ios-photo-preview {
+      max-width: min(340px, 85vw);
+      max-height: 45vh;
+      object-fit: contain;
+      border-radius: 16px;
+      border: 2px solid rgba(255,45,155,0.5);
+      box-shadow: 0 0 40px rgba(255,45,155,0.3);
+      margin-bottom: 1.5rem;
+    }
+
+    .ios-instruction-step {
+      font-size: clamp(0.85rem, 3.5vw, 1rem);
+      letter-spacing: 1px;
+      color: rgba(255,255,255,0.9);
+      font-family: 'Segoe UI', sans-serif;
+      line-height: 1.8;
+      text-align: center;
+    }
+
+    .ios-finger {
+      font-size: 2.2rem;
+      display: block;
+      text-align: center;
+      margin: 0.6rem 0;
+      animation: bounceDown 1s ease-in-out infinite;
+    }
+
+    @keyframes bounceDown {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(6px); }
+    }
+
+    .ios-close-btn {
+      margin-top: 1.5rem;
+      background: none;
+      border: 1px solid rgba(255,255,255,0.3);
+      color: rgba(255,255,255,0.6);
+      font-family: 'HuntersKPop', sans-serif;
+      font-size: 0.75rem;
+      letter-spacing: 3px;
+      padding: 0.6rem 1.8rem;
+      border-radius: 40px;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+    .ios-close-btn:hover { border-color: rgba(255,255,255,0.6); color: #fff; }
+
   </style>
 </head>
 <body>
@@ -770,6 +834,19 @@
 <!-- EFFECTS -->
 <div id="flash"></div>
 <div id="saved-notif">📸 Photo sauvegardée !</div>
+<!-- ═══════════════════════════════════════════════════
+     iOS SAVE OVERLAY
+══════════════════════════════════════════════════════ -->
+<div id="ios-save-overlay">
+  <img id="ios-photo-preview" src="" alt="Photo AR">
+  <span class="ios-finger">👆</span>
+  <div class="ios-instruction-step">
+    Appuyez <strong>longuement</strong> sur la photo<br>
+    puis choisissez<br>
+    <strong>« Enregistrer dans Photos »</strong>
+  </div>
+  <button class="ios-close-btn" onclick="closeIOSSave()">✕ FERMER</button>
+</div>
 <div id="error-banner" id="error-banner"></div>
 
 
@@ -1400,7 +1477,13 @@ async function startApp() {
 
   // Request camera permissions early
   try {
-    const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: {
+        facingMode: 'environment',
+        width:  { ideal: 4096 },
+        height: { ideal: 2160 }
+      }
+    });
     stream.getTracks().forEach(t => t.stop());
   } catch (e) {
     showError('Permission caméra refusée. Autorisez la caméra et réessayez.');
@@ -1476,19 +1559,88 @@ async function loadImg(src) {
   });
 }
 
+/* ======================================================
+   PREPARE IMAGE FOR COMPILATION
+   Draws character on white background with tight crop
+   so MindAR only tracks the printed visible content.
+   Transparent pixels (the cut parts) are excluded.
+====================================================== */
+function prepareForCompilation(img) {
+  // Step 1: draw original on temp canvas to read pixel data
+  const tmp = document.createElement('canvas');
+  tmp.width  = img.naturalWidth;
+  tmp.height = img.naturalHeight;
+  const tCtx = tmp.getContext('2d');
+  tCtx.drawImage(img, 0, 0);
+
+  // Step 2: find tight bounding box of non-transparent pixels
+  const data = tCtx.getImageData(0, 0, tmp.width, tmp.height).data;
+  let minX = tmp.width, maxX = 0, minY = tmp.height, maxY = 0;
+  for (let y = 0; y < tmp.height; y++) {
+    for (let x = 0; x < tmp.width; x++) {
+      const alpha = data[(y * tmp.width + x) * 4 + 3];
+      if (alpha > 10) { // threshold to ignore near-transparent edge AA pixels
+        if (x < minX) minX = x;
+        if (x > maxX) maxX = x;
+        if (y < minY) minY = y;
+        if (y > maxY) maxY = y;
+      }
+    }
+  }
+
+  // Fallback if no transparent pixels found
+  if (minX >= maxX || minY >= maxY) {
+    minX = 0; minY = 0; maxX = tmp.width - 1; maxY = tmp.height - 1;
+  }
+
+  // Add a small padding (2% of size) around the crop
+  const padX = Math.round((maxX - minX) * 0.02);
+  const padY = Math.round((maxY - minY) * 0.02);
+  minX = Math.max(0, minX - padX);
+  minY = Math.max(0, minY - padY);
+  maxX = Math.min(tmp.width  - 1, maxX + padX);
+  maxY = Math.min(tmp.height - 1, maxY + padY);
+
+  const cropW = maxX - minX + 1;
+  const cropH = maxY - minY + 1;
+
+  // Step 3: draw cropped character on WHITE background
+  const out = document.createElement('canvas');
+  out.width  = cropW;
+  out.height = cropH;
+  const oCtx = out.getContext('2d');
+
+  // White background = what the matte paper will look like
+  oCtx.fillStyle = '#ffffff';
+  oCtx.fillRect(0, 0, cropW, cropH);
+
+  // Draw character (alpha pixels become white)
+  oCtx.drawImage(img, minX, minY, cropW, cropH, 0, 0, cropW, cropH);
+
+  // Return as Image element for MindAR compiler
+  return new Promise(res => {
+    const outImg = new Image();
+    outImg.onload = () => res(outImg);
+    outImg.src = out.toDataURL('image/jpeg', 0.95); // JPEG = no alpha, forces white bg
+  });
+}
+
 async function compileTargets() {
   setProgress(2, 'Chargement des personnages...');
 
-  const [miraImg, rumiImg, zoeyImg] = await Promise.all(
-    CHARS.map(c => loadImg(c.imgSrc))
-  );
+  const rawImgs = await Promise.all(CHARS.map(c => loadImg(c.imgSrc)));
 
-  setProgress(8, 'Compilation AR en cours... (~30s)');
+  setProgress(5, 'Préparation des images de référence...');
+
+  // Prepare white-background cropped versions for compilation
+  const compileImgs = await Promise.all(rawImgs.map(img => prepareForCompilation(img)));
+
+  setProgress(10, 'Compilation AR en cours... (~30s)');
 
   const compiler = new MINDAR.IMAGE.Compiler();
   const buffer = await compiler.compileImageTargets(
-    [miraImg, rumiImg, zoeyImg],
-    progress => setProgress(8 + progress * 0.88, `Compilation... ${Math.round(progress)}%`)
+    compileImgs,
+    progress => setProgress(10 + progress * 0.86, `Compilation... ${Math.round(progress)}%`)
   );
 
   const exported = await compiler.exportData();
@@ -1497,7 +1649,21 @@ async function compileTargets() {
 }
 
 /* ======================================================
-   PHOTO CAPTURE
+   iOS DETECTION
+====================================================== */
+const IS_IOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+               (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
+function closeIOSSave() {
+  const overlay = document.getElementById('ios-save-overlay');
+  overlay.classList.remove('visible');
+  // Revoke the blob URL stored on the preview img
+  const preview = document.getElementById('ios-photo-preview');
+  if (preview._blobUrl) { URL.revokeObjectURL(preview._blobUrl); preview._blobUrl = null; }
+}
+
+/* ======================================================
+   PHOTO CAPTURE — High-res + iOS-aware
 ====================================================== */
 async function capturePhoto() {
   if (!APP.sceneReady) return;
@@ -1512,69 +1678,87 @@ async function capturePhoto() {
   }, 80);
 
   try {
-    const composite = document.createElement('canvas');
     const video = document.querySelector('#ar-container video');
-
     if (!video) throw new Error('Flux vidéo introuvable');
 
-    composite.width  = video.videoWidth  || window.innerWidth;
-    composite.height = video.videoHeight || window.innerHeight;
+    // --- High-res canvas: use actual video dimensions ---
+    const vW = video.videoWidth  || window.innerWidth;
+    const vH = video.videoHeight || window.innerHeight;
+
+    const composite = document.createElement('canvas');
+    composite.width  = vW;
+    composite.height = vH;
     const ctx = composite.getContext('2d');
 
-    // 1. Draw camera frame
-    ctx.drawImage(video, 0, 0, composite.width, composite.height);
+    // 1. Camera frame at full native resolution
+    ctx.drawImage(video, 0, 0, vW, vH);
 
-    // 2. Draw A-Frame WebGL canvas
+    // 2. AR overlay — scale from screen coords to video coords
+    const scaleX = vW / window.innerWidth;
+    const scaleY = vH / window.innerHeight;
+    ctx.save();
+    ctx.scale(scaleX, scaleY);
+
     const glCanvas = document.querySelector('#ar-container canvas');
     if (glCanvas) {
-      // Force preserveDrawingBuffer - need to re-render one frame
-      ctx.drawImage(glCanvas, 0, 0, composite.width, composite.height);
+      ctx.drawImage(glCanvas, 0, 0, window.innerWidth, window.innerHeight);
     }
 
-    // 3. Draw particles
-    ctx.drawImage(pCanvas, 0, 0, composite.width, composite.height);
+    // 3. Particles at screen scale
+    ctx.drawImage(pCanvas, 0, 0, window.innerWidth, window.innerHeight);
+    ctx.restore();
 
-    // 4. Watermark
-    const charName = APP.currentChar ? APP.currentChar.name : '';
+    // 4. Watermark (scaled to video resolution)
+    const charName = APP.squadMode ? 'SQUAD' : (APP.currentChar ? APP.currentChar.name : '');
     if (charName) {
       ctx.save();
-      ctx.font = `bold ${Math.round(composite.height * 0.055)}px HuntersKPop, sans-serif`;
+      const color = APP.squadMode ? '#FFD700' : APP.currentChar.color;
+      ctx.font = `bold ${Math.round(vH * 0.045)}px HuntersKPop, sans-serif`;
       ctx.textAlign = 'center';
-      ctx.globalAlpha = 0.85;
-      ctx.fillStyle = APP.currentChar.color;
-      ctx.shadowBlur = 20;
-      ctx.shadowColor = APP.currentChar.color;
-      ctx.fillText('HuntrX — ' + charName, composite.width / 2, composite.height * 0.08);
+      ctx.globalAlpha = 0.9;
+      ctx.fillStyle = color;
+      ctx.shadowBlur = Math.round(vH * 0.02);
+      ctx.shadowColor = color;
+      ctx.fillText('HuntrX — ' + charName, vW / 2, vH * 0.06);
       ctx.restore();
     }
 
-    // 5. Download
-    const filename = `huntrx-${charName.toLowerCase() || 'ar'}-${Date.now()}.png`;
+    // 5. Save — different method for iOS vs Android/Desktop
     composite.toBlob(blob => {
-      const url = URL.createObjectURL(blob);
-      const a   = document.createElement('a');
-      a.href     = url;
-      a.download = filename;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-    }, 'image/png');
+      const blobUrl = URL.createObjectURL(blob);
 
-    // Notification
-    const notif = document.getElementById('saved-notif');
-    notif.style.opacity = '1';
-    setTimeout(() => notif.style.opacity = '0', 2500);
+      if (IS_IOS) {
+        // iOS Safari: show photo in overlay with long-press instruction
+        const preview = document.getElementById('ios-photo-preview');
+        if (preview._blobUrl) URL.revokeObjectURL(preview._blobUrl);
+        preview._blobUrl = blobUrl;
+        preview.src = blobUrl;
+        document.getElementById('ios-save-overlay').classList.add('visible');
+      } else {
+        // Android / Desktop: direct download
+        const a   = document.createElement('a');
+        a.href     = blobUrl;
+        a.download = `huntrx-${charName.toLowerCase() || 'ar'}-${Date.now()}.jpg`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        setTimeout(() => URL.revokeObjectURL(blobUrl), 3000);
+
+        // Notification
+        const notif = document.getElementById('saved-notif');
+        notif.style.opacity = '1';
+        setTimeout(() => notif.style.opacity = '0', 2500);
+      }
+    }, 'image/jpeg', 0.92); // JPEG 92% = smaller + faster + better compat
 
   } catch (err) {
     console.error('[Capture]', err);
-    // Fallback: capture just the scene canvas
+    // Last-resort fallback
     const glCanvas = document.querySelector('#ar-container canvas');
     if (glCanvas) {
-      const url = glCanvas.toDataURL('image/png');
-      const a   = document.createElement('a');
-      a.href     = url;
-      a.download = `huntrx-${Date.now()}.png`;
+      const a = document.createElement('a');
+      a.href = glCanvas.toDataURL('image/jpeg', 0.92);
+      a.download = `huntrx-${Date.now()}.jpg`;
       a.click();
     }
   }
