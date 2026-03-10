@@ -35,12 +35,12 @@
 
     /* ===== CSS VARIABLES ===== */
     :root {
-      --mira-color: #FF2D9B;
-      --mira-glow: rgba(255,45,155,0.7);
+      --mira-color: #FF4500;
+      --mira-glow: rgba(255,69,0,0.7);
       --rumi-color: #8B2FFF;
       --rumi-glow: rgba(139,47,255,0.7);
-      --zoey-color: #00E5FF;
-      --zoey-glow: rgba(0,229,255,0.7);
+      --zoey-color: #FF8C00;
+      --zoey-glow: rgba(255,140,0,0.7);
       --gold: #FFD700;
       --bg-deep: #030008;
     }
@@ -515,10 +515,10 @@
     }
 
     @keyframes squadBorder {
-      0%   { box-shadow: inset 0 0 0 4px #FF2D9B, 0 0 30px #FF2D9B, inset 0 0 60px rgba(255,45,155,0.15); }
+      0%   { box-shadow: inset 0 0 0 4px #FF4500, 0 0 30px #FF4500, inset 0 0 60px rgba(255,69,0,0.15); }
       33%  { box-shadow: inset 0 0 0 4px #8B2FFF, 0 0 30px #8B2FFF, inset 0 0 60px rgba(139,47,255,0.15); }
-      66%  { box-shadow: inset 0 0 0 4px #00E5FF, 0 0 30px #00E5FF, inset 0 0 60px rgba(0,229,255,0.15); }
-      100% { box-shadow: inset 0 0 0 4px #FF2D9B, 0 0 30px #FF2D9B, inset 0 0 60px rgba(255,45,155,0.15); }
+      66%  { box-shadow: inset 0 0 0 4px #FF8C00, 0 0 30px #FF8C00, inset 0 0 60px rgba(255,140,0,0.15); }
+      100% { box-shadow: inset 0 0 0 4px #FF4500, 0 0 30px #FF4500, inset 0 0 60px rgba(255,69,0,0.15); }
     }
 
     /* Squad title */
@@ -548,7 +548,7 @@
       font-size: clamp(2.8rem, 14vw, 5.5rem);
       line-height: 0.9;
       letter-spacing: 3px;
-      background: linear-gradient(135deg, #FF2D9B 0%, #FFD700 40%, #8B2FFF 65%, #00E5FF 100%);
+      background: linear-gradient(135deg, #FF4500 0%, #FFD700 40%, #8B2FFF 65%, #FF8C00 100%);
       background-size: 300% 300%;
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
@@ -1010,10 +1010,10 @@
   </div>
   <div id="squad-members">
     <div class="squad-member-dot">
-      <div class="member-circle" style="color:#FF2D9B">
+      <div class="member-circle" style="color:#FF4500">
         <svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
       </div>
-      <span class="member-name-sm" style="color:#FF2D9B">MIRA</span>
+      <span class="member-name-sm" style="color:#FF4500">MIRA</span>
     </div>
     <div class="squad-member-dot">
       <div class="member-circle" style="color:#8B2FFF">
@@ -1022,10 +1022,10 @@
       <span class="member-name-sm" style="color:#8B2FFF">RUMI</span>
     </div>
     <div class="squad-member-dot">
-      <div class="member-circle" style="color:#00E5FF">
+      <div class="member-circle" style="color:#FF8C00">
         <svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
       </div>
-      <span class="member-name-sm" style="color:#00E5FF">ZOEY</span>
+      <span class="member-name-sm" style="color:#FF8C00">ZOEY</span>
     </div>
   </div>
 </div>
@@ -1097,42 +1097,42 @@ const CHARS = [
     id: 'mira',
     name: 'MIRA',
     role: 'The Blade Dancer',
-    color: '#FF2D9B',
-    glow: 'rgba(255,45,155,0.8)',
-    glowHex: '#FF2D9B',
-    particleColors: ['#FF2D9B', '#FF69B4', '#FFD700', '#FF99CC', '#fff'],
+    color: '#FF4500',          // rouge-orange = couleur contour topper Mira
+    glow: 'rgba(255,69,0,0.8)',
+    glowHex: '#FF4500',
+    particleColors: ['#FF4500', '#FF2D9B', '#FFD700', '#FF7043', '#fff'],
     imgSrc: 'assets/Mira.png',
     texId: 'tex-mira',
-    // Mira image ratio h/w = 0.896 (landscape-ish)
-    planeW: 1.6, planeH: 1.434,
+    // Mira new image: 2500x2369, ratio h/w=0.948
+    planeW: 1.6, planeH: 1.517,
   },
   {
     index: 1,
     id: 'rumi',
     name: 'RUMI',
     role: 'The Shadow Sword',
-    color: '#8B2FFF',
+    color: '#8B2FFF',          // violet = couleur contour topper Rumi
     glow: 'rgba(139,47,255,0.8)',
     glowHex: '#8B2FFF',
     particleColors: ['#8B2FFF', '#B97AFF', '#FFD700', '#CC99FF', '#fff'],
     imgSrc: 'assets/Rumi.png',
     texId: 'tex-rumi',
-    // Rumi image ratio h/w = 2.314
-    planeW: 1.0, planeH: 2.314,
+    // Rumi new image: 1000x2353, ratio h/w=2.353
+    planeW: 1.0, planeH: 2.353,
   },
   {
     index: 2,
     id: 'zoey',
     name: 'ZOEY',
     role: 'The Crystal Mage',
-    color: '#00E5FF',
-    glow: 'rgba(0,229,255,0.8)',
-    glowHex: '#00E5FF',
-    particleColors: ['#00E5FF', '#00BFFF', '#7FFFAA', '#B0FFFF', '#fff'],
+    color: '#FF8C00',          // orange = couleur contour topper Zoey
+    glow: 'rgba(255,140,0,0.8)',
+    glowHex: '#FF8C00',
+    particleColors: ['#FF8C00', '#FFD700', '#00E5FF', '#FFA500', '#fff'],
     imgSrc: 'assets/Zoey.png',
     texId: 'tex-zoey',
-    // Zoey image ratio h/w = 2.397
-    planeW: 1.0, planeH: 2.397,
+    // Zoey new image: 1000x2393, ratio h/w=2.393
+    planeW: 1.0, planeH: 2.393,
   },
   {
     index: 3,
@@ -1172,9 +1172,9 @@ const APP = {
 /* ======================================================
    INDEXED DB CACHE
 ====================================================== */
-const DB_NAME = 'huntrix-vr-v5';
+const DB_NAME = 'huntrix-vr-v6';
 const STORE   = 'mind-data';
-const CACHE_KEY = 'targets-v5-compiled';
+const CACHE_KEY = 'targets-v6-compiled';
 
 function openDB() {
   return new Promise((res, rej) => {
@@ -1533,7 +1533,7 @@ function resetARUI() {
 /* ======================================================
    SQUAD MODE
 ====================================================== */
-const SQUAD_COLORS = ['#FF2D9B','#8B2FFF','#00E5FF','#FFD700'];
+const SQUAD_COLORS = ['#FF4500','#8B2FFF','#FF8C00','#FFD700'];
 
 function enterSquadMode() {
   APP.squadMode = true;
@@ -1545,7 +1545,7 @@ function enterSquadMode() {
 
   const hint = document.getElementById('scan-hint');
   hint.innerHTML = '✦ SQUAD COMPLET ✦';
-  hint.style.background = 'linear-gradient(90deg, #FF2D9B, #8B2FFF, #00E5FF)';
+  hint.style.background = 'linear-gradient(90deg, #FF4500, #8B2FFF, #FF8C00)';
   hint.style.webkitBackgroundClip = 'text';
   hint.style.webkitTextFillColor = 'transparent';
 
@@ -1803,7 +1803,7 @@ class FireworkShard {
 /* ======================================================
    MEGA MODE — All 4 toppers detected
 ====================================================== */
-const MEGA_COLORS = ['#FF2D9B','#8B2FFF','#00E5FF','#FFD700','#fff','#FF99CC','#B97AFF','#7FFFAA'];
+const MEGA_COLORS = ['#FF4500','#8B2FFF','#FF8C00','#FFD700','#fff','#FF7043','#B97AFF','#00E5FF'];
 
 function enterMegaMode() {
   APP.megaMode = true;
