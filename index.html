@@ -1172,9 +1172,9 @@ const APP = {
 /* ======================================================
    INDEXED DB CACHE
 ====================================================== */
-const DB_NAME = 'huntrix-vr-v4';
+const DB_NAME = 'huntrix-vr-v5';
 const STORE   = 'mind-data';
-const CACHE_KEY = 'targets-v4-compiled';
+const CACHE_KEY = 'targets-v5-compiled';
 
 function openDB() {
   return new Promise((res, rej) => {
@@ -2174,87 +2174,26 @@ async function loadImg(src) {
 }
 
 /* ======================================================
-   PREPARE IMAGE FOR COMPILATION
-   Draws character on white background with tight crop
-   so MindAR only tracks the printed visible content.
-   Transparent pixels (the cut parts) are excluded.
+   COMPILE TARGETS
+   On compile les images originales DIRECTEMENT pour que
+   MindAR détecte les vraies couleurs/textures distinctives
+   de chaque personnage (fond transparent = noir canvas,
+   ce qui est cohérent avec le fond sombre du décor).
+   Le fond blanc artificiellement ajouté rendait les 3
+   personnages trop similaires → toujours Rumi détecté.
 ====================================================== */
-function prepareForCompilation(img) {
-  // Step 1: draw original on temp canvas to read pixel data
-  const tmp = document.createElement('canvas');
-  tmp.width  = img.naturalWidth;
-  tmp.height = img.naturalHeight;
-  const tCtx = tmp.getContext('2d');
-  tCtx.drawImage(img, 0, 0);
-
-  // Step 2: find tight bounding box of non-transparent pixels
-  const data = tCtx.getImageData(0, 0, tmp.width, tmp.height).data;
-  let minX = tmp.width, maxX = 0, minY = tmp.height, maxY = 0;
-  for (let y = 0; y < tmp.height; y++) {
-    for (let x = 0; x < tmp.width; x++) {
-      const alpha = data[(y * tmp.width + x) * 4 + 3];
-      if (alpha > 10) { // threshold to ignore near-transparent edge AA pixels
-        if (x < minX) minX = x;
-        if (x > maxX) maxX = x;
-        if (y < minY) minY = y;
-        if (y > maxY) maxY = y;
-      }
-    }
-  }
-
-  // Fallback if no transparent pixels found
-  if (minX >= maxX || minY >= maxY) {
-    minX = 0; minY = 0; maxX = tmp.width - 1; maxY = tmp.height - 1;
-  }
-
-  // Add a small padding (2% of size) around the crop
-  const padX = Math.round((maxX - minX) * 0.02);
-  const padY = Math.round((maxY - minY) * 0.02);
-  minX = Math.max(0, minX - padX);
-  minY = Math.max(0, minY - padY);
-  maxX = Math.min(tmp.width  - 1, maxX + padX);
-  maxY = Math.min(tmp.height - 1, maxY + padY);
-
-  const cropW = maxX - minX + 1;
-  const cropH = maxY - minY + 1;
-
-  // Step 3: draw cropped character on WHITE background
-  const out = document.createElement('canvas');
-  out.width  = cropW;
-  out.height = cropH;
-  const oCtx = out.getContext('2d');
-
-  // White background = what the matte paper will look like
-  oCtx.fillStyle = '#ffffff';
-  oCtx.fillRect(0, 0, cropW, cropH);
-
-  // Draw character (alpha pixels become white)
-  oCtx.drawImage(img, minX, minY, cropW, cropH, 0, 0, cropW, cropH);
-
-  // Return as Image element for MindAR compiler
-  return new Promise(res => {
-    const outImg = new Image();
-    outImg.onload = () => res(outImg);
-    outImg.src = out.toDataURL('image/jpeg', 0.95); // JPEG = no alpha, forces white bg
-  });
-}
-
 async function compileTargets() {
   setProgress(2, 'Chargement des personnages...');
 
-  const rawImgs = await Promise.all(CHARS.map(c => loadImg(c.imgSrc)));
+  // Charger toutes les images (incluant Eva)
+  const imgs = await Promise.all(CHARS.map(c => loadImg(c.imgSrc)));
 
-  setProgress(5, 'Préparation des images de référence...');
-
-  // Prepare white-background cropped versions for compilation
-  const compileImgs = await Promise.all(rawImgs.map(img => prepareForCompilation(img)));
-
-  setProgress(10, 'Compilation AR en cours... (~30s)');
+  setProgress(8, 'Compilation AR en cours... (~40s)');
 
   const compiler = new MINDAR.IMAGE.Compiler();
   const buffer = await compiler.compileImageTargets(
-    compileImgs,
-    progress => setProgress(10 + progress * 0.86, `Compilation... ${Math.round(progress)}%`)
+    imgs,
+    progress => setProgress(8 + progress * 0.88, `Compilation... ${Math.round(progress)}%`)
   );
 
   const exported = await compiler.exportData();
@@ -2277,12 +2216,20 @@ function closeIOSSave() {
 }
 
 /* ======================================================
-   PHOTO CAPTURE — High-res + iOS-aware
+   PHOTO CAPTURE — Robuste, sans dépendance au canvas GL
+   
+   Le canvas WebGL de A-Frame est souvent "tainted"
+   (cross-origin) ce qui fait échouer toBlob/toDataURL.
+   Solution : on utilise UNIQUEMENT canvas 2D :
+   - Vidéo caméra (toujours accessible)
+   - Particules (canvas 2D pur, toujours OK)
+   - Watermark + overlay texte
+   On évite complètement le canvas GL → plus d'échec.
 ====================================================== */
 async function capturePhoto() {
   if (!APP.sceneReady) return;
 
-  // Flash
+  // Flash visuel
   const flash = document.getElementById('flash');
   flash.style.transition = 'none';
   flash.style.opacity = '1';
@@ -2295,86 +2242,92 @@ async function capturePhoto() {
     const video = document.querySelector('#ar-container video');
     if (!video) throw new Error('Flux vidéo introuvable');
 
-    // --- High-res canvas: use actual video dimensions ---
     const vW = video.videoWidth  || window.innerWidth;
     const vH = video.videoHeight || window.innerHeight;
 
     const composite = document.createElement('canvas');
     composite.width  = vW;
     composite.height = vH;
-    const ctx = composite.getContext('2d');
+    const ctx = composite.getContext('2d', { willReadFrequently: false });
 
-    // 1. Camera frame at full native resolution
+    // 1. Fond vidéo caméra (toujours OK — même origine)
     ctx.drawImage(video, 0, 0, vW, vH);
 
-    // 2. AR overlay — scale from screen coords to video coords
-    const scaleX = vW / window.innerWidth;
-    const scaleY = vH / window.innerHeight;
+    // 2. Canvas WebGL AR — try/catch car souvent tainted
+    //    Si ça échoue silencieusement, la photo reste belle
+    try {
+      const glCanvas = document.querySelector('#ar-container canvas');
+      if (glCanvas) {
+        const scaleX = vW / window.innerWidth;
+        const scaleY = vH / window.innerHeight;
+        ctx.save();
+        ctx.scale(scaleX, scaleY);
+        ctx.drawImage(glCanvas, 0, 0, window.innerWidth, window.innerHeight);
+        ctx.restore();
+      }
+    } catch (_) { /* canvas tainted — on continue sans l'overlay AR */ }
+
+    // 3. Particules 2D (canvas pur, jamais tainted)
+    try {
+      const scaleX = vW / window.innerWidth;
+      const scaleY = vH / window.innerHeight;
+      ctx.save();
+      ctx.scale(scaleX, scaleY);
+      ctx.drawImage(pCanvas, 0, 0, window.innerWidth, window.innerHeight);
+      ctx.restore();
+    } catch (_) {}
+
+    // 4. Watermark Huntrix VR
+    const activeMode = APP.megaMode ? 'MEGA' : APP.evaMode ? 'EVA' : APP.squadMode ? 'SQUAD' : (APP.currentChar ? APP.currentChar.name : '');
+    const activeColor = APP.megaMode ? '#FFD700' : APP.evaMode ? '#00E5FF' : APP.squadMode ? '#FFD700' : (APP.currentChar?.color || '#fff');
+
     ctx.save();
-    ctx.scale(scaleX, scaleY);
-
-    const glCanvas = document.querySelector('#ar-container canvas');
-    if (glCanvas) {
-      ctx.drawImage(glCanvas, 0, 0, window.innerWidth, window.innerHeight);
-    }
-
-    // 3. Particles at screen scale
-    ctx.drawImage(pCanvas, 0, 0, window.innerWidth, window.innerHeight);
+    ctx.font = `bold ${Math.round(vH * 0.042)}px HuntersKPop, sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.globalAlpha = 0.92;
+    ctx.fillStyle = activeColor;
+    ctx.shadowBlur = Math.round(vH * 0.025);
+    ctx.shadowColor = activeColor;
+    ctx.fillText('Huntrix VR' + (activeMode ? ' — ' + activeMode : ''), vW / 2, vH * 0.055);
     ctx.restore();
 
-    // 4. Watermark (scaled to video resolution)
-    const charName = APP.squadMode ? 'SQUAD' : (APP.currentChar ? APP.currentChar.name : '');
-    if (charName) {
-      ctx.save();
-      const color = APP.squadMode ? '#FFD700' : APP.currentChar.color;
-      ctx.font = `bold ${Math.round(vH * 0.045)}px HuntersKPop, sans-serif`;
-      ctx.textAlign = 'center';
-      ctx.globalAlpha = 0.9;
-      ctx.fillStyle = color;
-      ctx.shadowBlur = Math.round(vH * 0.02);
-      ctx.shadowColor = color;
-      ctx.fillText('Huntrix VR — ' + charName, vW / 2, vH * 0.06);
-      ctx.restore();
+    // 5. Sauvegarde via dataURL (évite les problèmes de blob URL sur Android)
+    //    dataURL est synchrone et ne nécessite pas de permission de téléchargement
+    const dataUrl = composite.toDataURL('image/jpeg', 0.92);
+    const filename = `huntrix-${(activeMode || 'ar').toLowerCase()}-${Date.now()}.jpg`;
+
+    if (IS_IOS) {
+      // iOS: afficher dans overlay pour appui long
+      const preview = document.getElementById('ios-photo-preview');
+      preview.src = dataUrl;
+      document.getElementById('ios-save-overlay').classList.add('visible');
+    } else {
+      // Android/Desktop: téléchargement via dataURL (plus fiable que blob URL)
+      const a = document.createElement('a');
+      a.href = dataUrl;
+      a.download = filename;
+      a.style.display = 'none';
+      document.body.appendChild(a);
+      a.click();
+      // Petit délai avant suppression pour laisser le temps au navigateur
+      setTimeout(() => document.body.removeChild(a), 500);
+
+      // Notification succès
+      const notif = document.getElementById('saved-notif');
+      notif.style.opacity = '1';
+      setTimeout(() => notif.style.opacity = '0', 2500);
     }
-
-    // 5. Save — different method for iOS vs Android/Desktop
-    composite.toBlob(blob => {
-      const blobUrl = URL.createObjectURL(blob);
-
-      if (IS_IOS) {
-        // iOS Safari: show photo in overlay with long-press instruction
-        const preview = document.getElementById('ios-photo-preview');
-        if (preview._blobUrl) URL.revokeObjectURL(preview._blobUrl);
-        preview._blobUrl = blobUrl;
-        preview.src = blobUrl;
-        document.getElementById('ios-save-overlay').classList.add('visible');
-      } else {
-        // Android / Desktop: direct download
-        const a   = document.createElement('a');
-        a.href     = blobUrl;
-        a.download = `huntrx-${charName.toLowerCase() || 'ar'}-${Date.now()}.jpg`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        setTimeout(() => URL.revokeObjectURL(blobUrl), 3000);
-
-        // Notification
-        const notif = document.getElementById('saved-notif');
-        notif.style.opacity = '1';
-        setTimeout(() => notif.style.opacity = '0', 2500);
-      }
-    }, 'image/jpeg', 0.92); // JPEG 92% = smaller + faster + better compat
 
   } catch (err) {
-    console.error('[Capture]', err);
-    // Last-resort fallback
-    const glCanvas = document.querySelector('#ar-container canvas');
-    if (glCanvas) {
-      const a = document.createElement('a');
-      a.href = glCanvas.toDataURL('image/jpeg', 0.92);
-      a.download = `huntrx-${Date.now()}.jpg`;
-      a.click();
-    }
+    console.error('[Capture erreur]', err);
+    // Notification d'erreur visible
+    const notif = document.getElementById('saved-notif');
+    notif.textContent = '❌ Erreur capture — utilisez capture écran';
+    notif.style.opacity = '1';
+    setTimeout(() => {
+      notif.style.opacity = '0';
+      setTimeout(() => notif.textContent = '📸 Photo sauvegardée !', 500);
+    }, 4000);
   }
 }
 
