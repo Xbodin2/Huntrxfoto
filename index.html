@@ -2157,6 +2157,7 @@ async function compileAndLaunch() {
     document.getElementById('compile-screen').style.display = 'none';
     showARMode();
     APP.sceneReady = true;
+    preloadCharImages(); // Préchargement images pour capture photo
 
   } catch (err) {
     showError(err.message || 'Erreur inattendue. Vérifiez votre connexion et réessayez.');
@@ -2216,16 +2217,28 @@ function closeIOSSave() {
 }
 
 /* ======================================================
-   PHOTO CAPTURE — Robuste, sans dépendance au canvas GL
-   
-   Le canvas WebGL de A-Frame est souvent "tainted"
-   (cross-origin) ce qui fait échouer toBlob/toDataURL.
-   Solution : on utilise UNIQUEMENT canvas 2D :
-   - Vidéo caméra (toujours accessible)
-   - Particules (canvas 2D pur, toujours OK)
-   - Watermark + overlay texte
-   On évite complètement le canvas GL → plus d'échec.
+   PHOTO CAPTURE v8 — Haute résolution + overlays complets
+
+   FIXES v8:
+   - devicePixelRatio → canvas 2x/3x résolution réelle
+   - Vidéo : "cover" (rempli l'écran, pas letterbox) comme
+     A-Frame l'affiche nativement sur mobile
+   - Canvas GL essayé en premier (souvent OK sur Chrome Android)
+   - Overlays texte redessinés à pleine résolution DPR
+   - Fond semi-transparent derrière les textes pour lisibilité
 ====================================================== */
+
+/* Preload character images for canvas redraw */
+const CHAR_IMAGES = {};
+function preloadCharImages() {
+  CHARS.forEach(c => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.src = c.imgSrc;
+    img.onload = () => { CHAR_IMAGES[c.id] = img; };
+  });
+}
+
 async function capturePhoto() {
   if (!APP.sceneReady) return;
 
@@ -2242,77 +2255,125 @@ async function capturePhoto() {
     const video = document.querySelector('#ar-container video');
     if (!video) throw new Error('Flux vidéo introuvable');
 
-    const vW = video.videoWidth  || window.innerWidth;
-    const vH = video.videoHeight || window.innerHeight;
+    // ── Haute résolution via devicePixelRatio ──
+    // Sur iPhone 13 : dpr=3 → canvas 1170×2532 au lieu de 390×844
+    // Sur Android flagship : dpr=2~3
+    const dpr = Math.min(window.devicePixelRatio || 1, 3); // cap à 3x
+    const cW  = window.innerWidth;
+    const cH  = window.innerHeight;
+    const rW  = Math.round(cW * dpr); // résolution réelle canvas
+    const rH  = Math.round(cH * dpr);
 
     const composite = document.createElement('canvas');
-    composite.width  = vW;
-    composite.height = vH;
-    const ctx = composite.getContext('2d', { willReadFrequently: false });
+    composite.width  = rW;
+    composite.height = rH;
+    const ctx = composite.getContext('2d');
+    // Toutes les opérations suivantes sont en coordonnées DPR
+    ctx.scale(dpr, dpr);
 
-    // 1. Fond vidéo caméra (toujours OK — même origine)
-    ctx.drawImage(video, 0, 0, vW, vH);
+    // ── 1. VIDÉO en mode "cover" (comme CSS object-fit:cover) ──
+    // A-Frame affiche la vidéo en cover → on fait pareil pour cohérence
+    const vW = video.videoWidth  || cW;
+    const vH = video.videoHeight || cH;
+    const vAspect = vW / vH;
+    const sAspect = cW / cH;
 
-    // 2. Canvas WebGL AR — try/catch car souvent tainted
-    //    Si ça échoue silencieusement, la photo reste belle
+    let sx = 0, sy = 0, sw = vW, sh = vH; // source crop
+    if (vAspect > sAspect) {
+      // Vidéo plus large que l'écran : crop gauche/droite
+      sh = vH;
+      sw = vH * sAspect;
+      sx = (vW - sw) / 2;
+    } else {
+      // Vidéo plus haute : crop haut/bas
+      sw = vW;
+      sh = vW / sAspect;
+      sy = (vH - sh) / 2;
+    }
+    ctx.drawImage(video, sx, sy, sw, sh, 0, 0, cW, cH);
+
+    // ── 2. Canvas GL A-Frame (effets AR 3D) ──
+    // Souvent lisible sur Chrome Android moderne
+    // getUserMedia ne taint plus le canvas depuis Chrome 80+
+    let glCaptured = false;
     try {
       const glCanvas = document.querySelector('#ar-container canvas');
-      if (glCanvas) {
-        const scaleX = vW / window.innerWidth;
-        const scaleY = vH / window.innerHeight;
-        ctx.save();
-        ctx.scale(scaleX, scaleY);
-        ctx.drawImage(glCanvas, 0, 0, window.innerWidth, window.innerHeight);
-        ctx.restore();
+      if (glCanvas && glCanvas.width > 0) {
+        ctx.drawImage(glCanvas, 0, 0, cW, cH);
+        glCaptured = true;
       }
-    } catch (_) { /* canvas tainted — on continue sans l'overlay AR */ }
+    } catch (_) { /* tainted sur certains appareils — on continue */ }
 
-    // 3. Particules 2D (canvas pur, jamais tainted)
-    try {
-      const scaleX = vW / window.innerWidth;
-      const scaleY = vH / window.innerHeight;
-      ctx.save();
-      ctx.scale(scaleX, scaleY);
-      ctx.drawImage(pCanvas, 0, 0, window.innerWidth, window.innerHeight);
-      ctx.restore();
-    } catch (_) {}
+    // ── 3. PERSONNAGES redessinés si GL non capturé ──
+    if (!glCaptured && APP.foundTargets.size > 0) {
+      const visibleChars = CHARS.filter(c => APP.foundTargets.has(c.id) && !c.isEva);
+      visibleChars.forEach((c, i) => {
+        const img = CHAR_IMAGES[c.id];
+        if (!img || !img.complete) return;
+        const totalW = cW * (visibleChars.length > 1 ? 0.42 : 0.62);
+        const totalH = totalW * (c.planeH / c.planeW);
+        const offsetX = visibleChars.length > 1
+          ? (i - (visibleChars.length - 1) / 2) * cW * 0.22
+          : 0;
+        const px = cW / 2 - totalW / 2 + offsetX;
+        const py = cH / 2 - totalH * 0.55;
+        ctx.save();
+        ctx.shadowColor = c.color; ctx.shadowBlur = 30; ctx.globalAlpha = 0.95;
+        ctx.drawImage(img, px, py, totalW, totalH);
+        ctx.shadowBlur = 55; ctx.globalAlpha = 0.35;
+        ctx.drawImage(img, px, py, totalW, totalH);
+        ctx.restore();
+      });
 
-    // 4. Watermark Huntrix VR
-    const activeMode = APP.megaMode ? 'MEGA' : APP.evaMode ? 'EVA' : APP.squadMode ? 'SQUAD' : (APP.currentChar ? APP.currentChar.name : '');
-    const activeColor = APP.megaMode ? '#FFD700' : APP.evaMode ? '#00E5FF' : APP.squadMode ? '#FFD700' : (APP.currentChar?.color || '#fff');
+      if (APP.foundTargets.has('eva')) {
+        const ec = CHARS.find(c => c.isEva);
+        const ei = CHAR_IMAGES['eva'];
+        if (ei && ec) {
+          const ew = cW * 0.48;
+          const eh = ew * (ec.planeH / ec.planeW);
+          ctx.save();
+          ctx.shadowColor = '#00E5FF'; ctx.shadowBlur = 35; ctx.globalAlpha = 0.95;
+          ctx.drawImage(ei, cW / 2 - ew / 2, cH * 0.5, ew, eh);
+          ctx.restore();
+        }
+      }
+    }
 
+    // ── 4. PARTICULES (canvas 2D pur) ──
+    ctx.drawImage(pCanvas, 0, 0, cW, cH);
+
+    // ── 5. OVERLAYS TEXTE ──
+    if (APP.megaMode)        drawPhotoOverlayMega(ctx, cW, cH);
+    else if (APP.evaMode)    drawPhotoOverlayEva(ctx, cW, cH);
+    else if (APP.squadMode)  drawPhotoOverlaySquad(ctx, cW, cH);
+    else if (APP.currentChar) drawPhotoOverlayChar(ctx, cW, cH, APP.currentChar);
+
+    // ── 6. WATERMARK ──
     ctx.save();
-    ctx.font = `bold ${Math.round(vH * 0.042)}px HuntersKPop, sans-serif`;
-    ctx.textAlign = 'center';
-    ctx.globalAlpha = 0.92;
-    ctx.fillStyle = activeColor;
-    ctx.shadowBlur = Math.round(vH * 0.025);
-    ctx.shadowColor = activeColor;
-    ctx.fillText('Huntrix VR' + (activeMode ? ' — ' + activeMode : ''), vW / 2, vH * 0.055);
+    ctx.font = `bold ${Math.round(cH * 0.024)}px HuntersKPop, sans-serif`;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
+    ctx.globalAlpha = 0.65; ctx.fillStyle = '#fff';
+    ctx.shadowBlur = 6; ctx.shadowColor = 'rgba(0,0,0,0.9)';
+    ctx.fillText('✦ Huntrix VR ✦', cW / 2, cH - 10);
     ctx.restore();
 
-    // 5. Sauvegarde via dataURL (évite les problèmes de blob URL sur Android)
-    //    dataURL est synchrone et ne nécessite pas de permission de téléchargement
-    const dataUrl = composite.toDataURL('image/jpeg', 0.92);
-    const filename = `huntrix-${(activeMode || 'ar').toLowerCase()}-${Date.now()}.jpg`;
+    // ── 7. SAUVEGARDE haute qualité ──
+    const activeMode = APP.megaMode ? 'mega'
+      : APP.evaMode ? 'eva'
+      : APP.squadMode ? 'squad'
+      : (APP.currentChar?.id || 'ar');
+    const dataUrl = composite.toDataURL('image/jpeg', 0.95);
+    const filename = `huntrix-${activeMode}-${Date.now()}.jpg`;
 
     if (IS_IOS) {
-      // iOS: afficher dans overlay pour appui long
       const preview = document.getElementById('ios-photo-preview');
       preview.src = dataUrl;
       document.getElementById('ios-save-overlay').classList.add('visible');
     } else {
-      // Android/Desktop: téléchargement via dataURL (plus fiable que blob URL)
       const a = document.createElement('a');
-      a.href = dataUrl;
-      a.download = filename;
-      a.style.display = 'none';
-      document.body.appendChild(a);
-      a.click();
-      // Petit délai avant suppression pour laisser le temps au navigateur
+      a.href = dataUrl; a.download = filename; a.style.display = 'none';
+      document.body.appendChild(a); a.click();
       setTimeout(() => document.body.removeChild(a), 500);
-
-      // Notification succès
       const notif = document.getElementById('saved-notif');
       notif.style.opacity = '1';
       setTimeout(() => notif.style.opacity = '0', 2500);
@@ -2320,15 +2381,177 @@ async function capturePhoto() {
 
   } catch (err) {
     console.error('[Capture erreur]', err);
-    // Notification d'erreur visible
     const notif = document.getElementById('saved-notif');
-    notif.textContent = '❌ Erreur capture — utilisez capture écran';
+    notif.textContent = '❌ Erreur — faites une capture écran';
     notif.style.opacity = '1';
     setTimeout(() => {
       notif.style.opacity = '0';
       setTimeout(() => notif.textContent = '📸 Photo sauvegardée !', 500);
     }, 4000);
   }
+}
+
+/* ════════════════════════════════════════════════════════
+   OVERLAYS TEXTE PHOTO — redessinés sur canvas 2D
+   Reproduisent fidèlement les textes affichés à l'écran
+   avec fond semi-transparent pour lisibilité maximale
+════════════════════════════════════════════════════════ */
+
+function photoGlow(ctx, text, x, y, color, fs, blur) {
+  ctx.save();
+  ctx.font = `bold ${fs}px HuntersKPop, sans-serif`;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  // Fond sombre derrière le texte pour lisibilité
+  const met = ctx.measureText(text);
+  const pad = fs * 0.25;
+  ctx.globalAlpha = 0.45;
+  ctx.fillStyle = '#000';
+  ctx.beginPath();
+  ctx.roundRect(x - met.width/2 - pad, y - fs*0.65, met.width + pad*2, fs*1.3, fs*0.2);
+  ctx.fill();
+  // Texte avec glow
+  ctx.globalAlpha = 1;
+  ctx.shadowColor = color; ctx.shadowBlur = blur;
+  ctx.fillStyle = color;
+  ctx.fillText(text, x, y);
+  ctx.shadowBlur = blur * 1.8; ctx.globalAlpha = 0.55;
+  ctx.fillText(text, x, y);
+  ctx.restore();
+}
+
+function photoSmall(ctx, text, x, y, color, fs) {
+  ctx.save();
+  ctx.font = `${fs}px HuntersKPop, sans-serif`;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.globalAlpha = 0.9; ctx.fillStyle = color;
+  ctx.shadowColor = color; ctx.shadowBlur = 10;
+  ctx.fillText(text, x, y);
+  ctx.restore();
+}
+
+function drawPhotoOverlayChar(ctx, cW, cH, char) {
+  // Bandeau haut : NOM + rôle
+  const bannerH = cH * 0.2;
+  ctx.save();
+  const grad = ctx.createLinearGradient(0, 0, 0, bannerH);
+  grad.addColorStop(0, 'rgba(0,0,0,0.75)');
+  grad.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, cW, bannerH);
+  ctx.restore();
+
+  photoGlow(ctx, char.name, cW/2, cH * 0.09, char.color, cH * 0.1, 35);
+  photoSmall(ctx, char.role.toUpperCase(), cW/2, cH * 0.175, 'rgba(255,255,255,0.85)', cH * 0.03);
+}
+
+function drawPhotoOverlaySquad(ctx, cW, cH) {
+  const bannerH = cH * 0.25;
+  ctx.save();
+  const grad = ctx.createLinearGradient(0, 0, 0, bannerH);
+  grad.addColorStop(0, 'rgba(0,0,0,0.8)');
+  grad.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = grad; ctx.fillRect(0, 0, cW, bannerH);
+  ctx.restore();
+
+  photoGlow(ctx, 'SQUAD COMPLET', cW/2, cH * 0.09, '#FFD700', cH * 0.075, 30);
+
+  const members = [
+    {name:'MIRA', color:'#FF4500'},
+    {name:'RUMI', color:'#8B2FFF'},
+    {name:'ZOEY', color:'#FF8C00'},
+  ];
+  const gap = cW * 0.3;
+  members.forEach((m, i) => {
+    const mx = cW/2 + (i-1) * gap;
+    photoGlow(ctx, m.name, mx, cH * 0.185, m.color, cH * 0.05, 18);
+  });
+
+  photoSmall(ctx, '✦ Huntrix VR ✦', cW/2, cH * 0.245, 'rgba(255,255,255,0.7)', cH * 0.026);
+}
+
+function drawPhotoOverlayEva(ctx, cW, cH) {
+  // Bandeau haut
+  const bannerH = cH * 0.36;
+  ctx.save();
+  const grad = ctx.createLinearGradient(0, 0, 0, bannerH);
+  grad.addColorStop(0, 'rgba(0,0,10,0.82)');
+  grad.addColorStop(1, 'rgba(0,0,10,0)');
+  ctx.fillStyle = grad; ctx.fillRect(0, 0, cW, bannerH);
+  ctx.restore();
+
+  // ✦ JOYEUX ANNIVERSAIRE ✦
+  photoSmall(ctx, '✦ JOYEUX ANNIVERSAIRE ✦', cW/2, cH * 0.055, 'rgba(255,255,255,0.9)', cH * 0.033);
+
+  // EVA en grand avec dégradé cyan→blanc→rose→or
+  ctx.save();
+  const fs = cH * 0.17;
+  ctx.font = `bold ${fs}px HuntersKPop, sans-serif`;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  const gEva = ctx.createLinearGradient(cW*0.15, 0, cW*0.85, 0);
+  gEva.addColorStop(0,   '#00E5FF');
+  gEva.addColorStop(0.35,'#ffffff');
+  gEva.addColorStop(0.65,'#FF2D9B');
+  gEva.addColorStop(1,   '#FFD700');
+  ctx.shadowColor = '#00E5FF'; ctx.shadowBlur = 50;
+  ctx.fillStyle = gEva;
+  ctx.fillText('EVA', cW/2, cH * 0.185);
+  ctx.shadowBlur = 90; ctx.globalAlpha = 0.4;
+  ctx.fillText('EVA', cW/2, cH * 0.185);
+  ctx.restore();
+
+  // 7 ANOS
+  photoGlow(ctx, '7 ANOS', cW/2, cH * 0.29, '#FFD700', cH * 0.058, 25);
+
+  // Emojis
+  ctx.save();
+  ctx.font = `${cH * 0.055}px serif`;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText('🎂  🎉  ⭐  🎊  🎂', cW/2, cH * 0.355);
+  ctx.restore();
+}
+
+function drawPhotoOverlayMega(ctx, cW, cH) {
+  const bannerH = cH * 0.38;
+  ctx.save();
+  const grad = ctx.createLinearGradient(0, 0, 0, bannerH);
+  grad.addColorStop(0, 'rgba(0,0,10,0.85)');
+  grad.addColorStop(1, 'rgba(0,0,10,0)');
+  ctx.fillStyle = grad; ctx.fillRect(0, 0, cW, bannerH);
+  ctx.restore();
+
+  // HAPPY BIRTHDAY en dégradé
+  ctx.save();
+  const fs = cH * 0.092;
+  ctx.font = `bold ${fs}px HuntersKPop, sans-serif`;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  const gM = ctx.createLinearGradient(0, 0, cW, 0);
+  gM.addColorStop(0,'#FF4500'); gM.addColorStop(0.33,'#FFD700');
+  gM.addColorStop(0.66,'#8B2FFF'); gM.addColorStop(1,'#FF8C00');
+  ctx.shadowColor = '#FFD700'; ctx.shadowBlur = 50;
+  ctx.fillStyle = gM;
+  ctx.fillText('HAPPY BIRTHDAY', cW/2, cH * 0.09);
+  ctx.restore();
+
+  // EVA — 7 ANOS
+  photoGlow(ctx, 'EVA — 7 ANOS 🎂', cW/2, cH * 0.19, '#00E5FF', cH * 0.06, 28);
+
+  // Membres
+  const members = [
+    {name:'MIRA',color:'#FF4500'},
+    {name:'RUMI',color:'#8B2FFF'},
+    {name:'ZOEY',color:'#FF8C00'},
+  ];
+  const gap = cW * 0.3;
+  members.forEach((m,i) => {
+    photoGlow(ctx, m.name, cW/2+(i-1)*gap, cH*0.275, m.color, cH*0.048, 15);
+  });
+
+  // Emojis
+  ctx.save();
+  ctx.font = `${cH * 0.058}px serif`;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText('🎆  🎂  ✨  🎊  🎉  🎆', cW/2, cH * 0.345);
+  ctx.restore();
 }
 
 /* ======================================================
