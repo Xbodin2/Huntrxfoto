@@ -7,7 +7,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="theme-color" content="#030008">
-  <title>HuntrX AR — K-Pop Demon Hunters</title>
+  <title>Huntrix VR — K-Pop Demon Hunters</title>
 
   <!-- MindAR + A-Frame -->
   <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image.prod.js"></script>
@@ -701,6 +701,205 @@
     }
     .ios-close-btn:hover { border-color: rgba(255,255,255,0.6); color: #fff; }
 
+
+    /* ===================================================
+       EVA BIRTHDAY OVERLAY
+    =================================================== */
+    #eva-overlay {
+      position: fixed; inset: 0;
+      pointer-events: none;
+      z-index: 155;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      padding-top: 8%;
+    }
+
+    #eva-title-wrap {
+      text-align: center;
+      animation: evaIn 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) both;
+    }
+
+    @keyframes evaIn {
+      from { opacity: 0; transform: scale(0.3) rotate(8deg); }
+      to   { opacity: 1; transform: scale(1) rotate(0deg); }
+    }
+
+    .eva-birthday-text {
+      display: block;
+      font-size: clamp(0.55rem, 2.5vw, 0.75rem);
+      letter-spacing: 5px;
+      color: rgba(255,255,255,0.85);
+      margin-bottom: 0.3rem;
+    }
+
+    .eva-name {
+      display: block;
+      font-size: clamp(3rem, 16vw, 6rem);
+      letter-spacing: 4px;
+      line-height: 0.9;
+      background: linear-gradient(135deg, #00E5FF 0%, #fff 40%, #FF2D9B 70%, #FFD700 100%);
+      background-size: 300% 300%;
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      animation: evaGrad 2s linear infinite, evaPulse 1.5s ease-in-out infinite;
+      filter: drop-shadow(0 0 20px rgba(0,229,255,0.7));
+    }
+
+    @keyframes evaGrad {
+      0%   { background-position: 0% 50%; }
+      50%  { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+
+    @keyframes evaPulse {
+      0%,100% { filter: drop-shadow(0 0 15px rgba(0,229,255,0.7)); }
+      50%     { filter: drop-shadow(0 0 35px rgba(255,45,155,0.9)); }
+    }
+
+    .eva-anos {
+      display: block;
+      font-size: clamp(1rem, 5vw, 1.8rem);
+      letter-spacing: 8px;
+      color: rgba(255,255,255,0.8);
+      text-shadow: 0 0 20px #00E5FF;
+      margin-top: 0.2rem;
+    }
+
+    .eva-cake-row {
+      display: flex;
+      gap: 0.5rem;
+      justify-content: center;
+      margin-top: 0.8rem;
+      font-size: clamp(1.2rem, 5vw, 1.8rem);
+    }
+
+    .eva-cake-row span {
+      animation: cakeBounce 0.8s ease-in-out infinite;
+    }
+    .eva-cake-row span:nth-child(1) { animation-delay: 0s; }
+    .eva-cake-row span:nth-child(2) { animation-delay: 0.1s; }
+    .eva-cake-row span:nth-child(3) { animation-delay: 0.2s; }
+    .eva-cake-row span:nth-child(4) { animation-delay: 0.3s; }
+    .eva-cake-row span:nth-child(5) { animation-delay: 0.4s; }
+
+    @keyframes cakeBounce {
+      0%,100% { transform: translateY(0) scale(1); }
+      50%     { transform: translateY(-8px) scale(1.2); }
+    }
+
+    /* Eva border pulse */
+    #eva-border {
+      position: fixed; inset: 0; pointer-events: none; z-index: 152;
+      display: none;
+      animation: evaBorder 1.5s ease-in-out infinite;
+    }
+
+    @keyframes evaBorder {
+      0%,100% { box-shadow: inset 0 0 0 4px rgba(0,229,255,0.8), 0 0 40px rgba(0,229,255,0.4); }
+      33%     { box-shadow: inset 0 0 0 4px rgba(255,45,155,0.8), 0 0 40px rgba(255,45,155,0.4); }
+      66%     { box-shadow: inset 0 0 0 4px rgba(255,215,0,0.8),  0 0 40px rgba(255,215,0,0.4); }
+    }
+
+    /* ===================================================
+       MEGA OVERLAY — All 4 detected
+    =================================================== */
+    #mega-overlay {
+      position: fixed; inset: 0;
+      pointer-events: none;
+      z-index: 160;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+
+    #mega-title-wrap {
+      text-align: center;
+      animation: megaIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) both;
+    }
+
+    @keyframes megaIn {
+      from { opacity: 0; transform: scale(0.2) rotate(-10deg); }
+      to   { opacity: 1; transform: scale(1) rotate(0deg); }
+    }
+
+    .mega-pre {
+      display: block;
+      font-size: clamp(0.55rem, 2vw, 0.7rem);
+      letter-spacing: 6px;
+      color: rgba(255,255,255,0.7);
+      margin-bottom: 0.4rem;
+    }
+
+    .mega-title {
+      display: block;
+      font-size: clamp(2.5rem, 13vw, 5rem);
+      letter-spacing: 3px;
+      line-height: 0.9;
+      background: linear-gradient(135deg, #FF2D9B, #FFD700, #8B2FFF, #00E5FF, #FF2D9B);
+      background-size: 400% 400%;
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      animation: megaGrad 1.5s linear infinite;
+      filter: drop-shadow(0 0 30px rgba(255,215,0,0.8));
+    }
+
+    @keyframes megaGrad {
+      0%   { background-position: 0% 50%; }
+      100% { background-position: 100% 50%; }
+    }
+
+    .mega-sub {
+      display: block;
+      font-size: clamp(0.9rem, 4vw, 1.4rem);
+      letter-spacing: 4px;
+      background: linear-gradient(90deg, #00E5FF, #FF2D9B);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-top: 0.4rem;
+      animation: evaPulse 1.2s ease-in-out infinite;
+    }
+
+    .mega-emoji-row {
+      display: flex; gap: 0.6rem; justify-content: center;
+      margin-top: 1rem; font-size: clamp(1.4rem, 6vw, 2.2rem);
+    }
+
+    .mega-emoji-row span {
+      animation: cakeBounce 0.7s ease-in-out infinite;
+    }
+    .mega-emoji-row span:nth-child(1) { animation-delay: 0s; }
+    .mega-emoji-row span:nth-child(2) { animation-delay: 0.1s; }
+    .mega-emoji-row span:nth-child(3) { animation-delay: 0.2s; }
+    .mega-emoji-row span:nth-child(4) { animation-delay: 0.3s; }
+    .mega-emoji-row span:nth-child(5) { animation-delay: 0.4s; }
+    .mega-emoji-row span:nth-child(6) { animation-delay: 0.5s; }
+
+    #mega-border {
+      position: fixed; inset: 0; pointer-events: none; z-index: 158;
+      display: none;
+      animation: megaBorder 0.8s linear infinite;
+    }
+
+    @keyframes megaBorder {
+      0%   { box-shadow: inset 0 0 0 5px #FF2D9B, 0 0 50px #FF2D9B; }
+      25%  { box-shadow: inset 0 0 0 5px #FFD700, 0 0 50px #FFD700; }
+      50%  { box-shadow: inset 0 0 0 5px #8B2FFF, 0 0 50px #8B2FFF; }
+      75%  { box-shadow: inset 0 0 0 5px #00E5FF, 0 0 50px #00E5FF; }
+      100% { box-shadow: inset 0 0 0 5px #FF2D9B, 0 0 50px #FF2D9B; }
+    }
+
+    .mega-bolt { position: absolute; font-size: clamp(2rem, 8vw, 3.5rem);
+      animation: boltFlash 0.4s ease-in-out infinite alternate; }
+    .mega-bolt.tl { top: 4%; left: 3%; animation-delay: 0s; }
+    .mega-bolt.tr { top: 4%; right: 3%; animation-delay: 0.15s; }
+    .mega-bolt.bl { bottom: 4%; left: 3%; animation-delay: 0.3s; }
+    .mega-bolt.br { bottom: 4%; right: 3%; animation-delay: 0.1s; }
   </style>
 </head>
 <body>
@@ -710,7 +909,7 @@
 ══════════════════════════════════════════════════════ -->
 <div id="splash" class="screen">
   <div class="splash-logo-wrap">
-    <div class="splash-logo">HuntrX</div>
+    <div class="splash-logo">Huntrix VR</div>
     <div class="splash-subtitle">K-Pop Demon Hunters</div>
   </div>
 
@@ -806,7 +1005,7 @@
   <span class="squad-bolt br">⚡</span>
   <div id="squad-title-wrap">
     <span class="squad-label">✦ SQUAD COMPLET ✦</span>
-    <span class="squad-main">HuntrX</span>
+    <span class="squad-main">Huntrix VR</span>
     <span class="squad-subtitle">DEMON HUNTERS UNLOCKED</span>
   </div>
   <div id="squad-members">
@@ -827,6 +1026,41 @@
         <svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
       </div>
       <span class="member-name-sm" style="color:#00E5FF">ZOEY</span>
+    </div>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════
+     EVA BIRTHDAY OVERLAY
+══════════════════════════════════════════════════════ -->
+<div id="eva-border"></div>
+<div id="eva-overlay">
+  <div id="eva-title-wrap">
+    <span class="eva-birthday-text">✦ JOYEUX ANNIVERSAIRE ✦</span>
+    <span class="eva-name">EVA</span>
+    <span class="eva-anos">7 ANOS ✨</span>
+    <div class="eva-cake-row">
+      <span>🎂</span><span>🎉</span><span>⭐</span><span>🎊</span><span>🎂</span>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════
+     MEGA OVERLAY — All 4 detected
+══════════════════════════════════════════════════════ -->
+<div id="mega-border"></div>
+<div id="mega-overlay">
+  <span class="mega-bolt tl">⚡</span>
+  <span class="mega-bolt tr">⚡</span>
+  <span class="mega-bolt bl">⚡</span>
+  <span class="mega-bolt br">⚡</span>
+  <div id="mega-title-wrap">
+    <span class="mega-pre">✦ HUNTRIX VR — SQUAD COMPLET ✦</span>
+    <span class="mega-title">HAPPY<br>BIRTHDAY</span>
+    <span class="mega-sub">EVA — 7 ANOS 🎂</span>
+    <div class="mega-emoji-row">
+      <span>🎆</span><span>🎂</span><span>✨</span><span>🎊</span><span>🎉</span><span>🎆</span>
     </div>
   </div>
 </div>
@@ -900,6 +1134,21 @@ const CHARS = [
     // Zoey image ratio h/w = 2.397
     planeW: 1.0, planeH: 2.397,
   },
+  {
+    index: 3,
+    id: 'eva',
+    name: 'EVA',
+    role: '7 Anos',
+    color: '#00E5FF',
+    glow: 'rgba(0,229,255,0.8)',
+    glowHex: '#00D4FF',
+    particleColors: ['#FF2D9B', '#8B2FFF', '#00E5FF', '#FFD700', '#fff', '#FF99CC'],
+    imgSrc: 'assets/Eva.png',
+    texId: 'tex-eva',
+    // Eva image ratio h/w = 0.808 (landscape)
+    planeW: 1.6, planeH: 1.293,
+    isEva: true,
+  },
 ];
 
 /* ======================================================
@@ -908,7 +1157,11 @@ const CHARS = [
 const APP = {
   currentChar: null,
   foundTargets: new Set(),   // set of char ids currently visible
-  squadMode: false,          // true when all 3 are visible
+  squadMode: false,          // true when Mira+Rumi+Zoey visible
+  evaMode: false,            // true when Eva alone visible
+  megaMode: false,           // true when all 4 visible
+  fireworkInterval: null,    // interval for Eva fireworks
+  bubbleInterval: null,      // interval for Eva bubbles
   particles: [],
   particleInterval: null,
   animId: null,
@@ -919,9 +1172,9 @@ const APP = {
 /* ======================================================
    INDEXED DB CACHE
 ====================================================== */
-const DB_NAME = 'huntrx-ar-v2';
+const DB_NAME = 'huntrix-vr-v4';
 const STORE   = 'mind-data';
-const CACHE_KEY = 'targets-compiled';
+const CACHE_KEY = 'targets-v4-compiled';
 
 function openDB() {
   return new Promise((res, rej) => {
@@ -1139,14 +1392,32 @@ async function buildGlowTexture(imgSrc, color, blurPx = 18) {
 function onTargetFound(char) {
   APP.foundTargets.add(char.id);
 
-  // If squad mode just completed — handle specially
-  if (APP.foundTargets.size === 3 && !APP.squadMode) {
+  const has3Chars = ['mira','rumi','zoey'].every(id => APP.foundTargets.has(id));
+  const hasEva = APP.foundTargets.has('eva');
+
+  // MEGA MODE: all 4 detected
+  if (has3Chars && hasEva && !APP.megaMode) {
+    if (APP.squadMode) exitSquadMode();
+    if (APP.evaMode) exitEvaMode();
+    enterMegaMode();
+    return;
+  }
+  if (APP.megaMode) return;
+
+  // SQUAD MODE: 3 characters (no Eva)
+  if (has3Chars && !APP.squadMode) {
+    if (APP.evaMode) exitEvaMode();
     enterSquadMode();
     return;
   }
-
-  // If already in squad mode, do nothing extra
   if (APP.squadMode) return;
+
+  // EVA MODE: Eva detected
+  if (char.isEva && !APP.evaMode) {
+    enterEvaMode();
+    return;
+  }
+  if (APP.evaMode) return;
 
   APP.currentChar = char;
 
@@ -1191,19 +1462,46 @@ function onTargetFound(char) {
 function onTargetLost(char) {
   APP.foundTargets.delete(char.id);
 
-  // Exit squad mode if we were in it
-  if (APP.squadMode) {
-    exitSquadMode();
-    // If one char still visible, re-trigger its state
+  const has3Chars = ['mira','rumi','zoey'].every(id => APP.foundTargets.has(id));
+  const hasEva = APP.foundTargets.has('eva');
+
+  // Was in mega mode
+  if (APP.megaMode) {
+    exitMegaMode();
+    // Re-evaluate remaining state
+    if (has3Chars && hasEva) { enterMegaMode(); return; }
+    if (has3Chars) { enterSquadMode(); return; }
+    if (hasEva) { enterEvaMode(); return; }
     if (APP.foundTargets.size > 0) {
-      const stillVisible = CHARS.find(c => APP.foundTargets.has(c.id));
-      if (stillVisible) onTargetFound(stillVisible);
+      const still = CHARS.find(c => APP.foundTargets.has(c.id));
+      if (still) onTargetFound(still);
     }
     return;
   }
 
+  // Was in squad mode
+  if (APP.squadMode) {
+    exitSquadMode();
+    if (hasEva) { enterEvaMode(); return; }
+    if (APP.foundTargets.size > 0) {
+      const still = CHARS.find(c => APP.foundTargets.has(c.id));
+      if (still) onTargetFound(still);
+    } else { resetARUI(); }
+    return;
+  }
+
+  // Was in eva mode
+  if (APP.evaMode) {
+    exitEvaMode();
+    if (APP.foundTargets.size > 0) {
+      const still = CHARS.find(c => APP.foundTargets.has(c.id));
+      if (still) onTargetFound(still);
+    } else { resetARUI(); }
+    return;
+  }
+
+  // Single char mode
   if (APP.foundTargets.size > 0) {
-    // Another char may still be visible — switch to it
     const stillVisible = CHARS.find(c => APP.foundTargets.has(c.id));
     if (stillVisible && stillVisible.id !== APP.currentChar?.id) {
       APP.currentChar = null;
@@ -1212,21 +1510,23 @@ function onTargetLost(char) {
     return;
   }
 
-  // Nothing visible
-  APP.currentChar = null;
+  resetARUI();
+}
 
+function resetARUI() {
+  APP.currentChar = null;
   document.getElementById('scan-frame').style.opacity = '1';
   document.getElementById('char-name-reveal').classList.remove('visible');
   document.getElementById('char-name-reveal').style.animation = '';
-
   const hint = document.getElementById('scan-hint');
   hint.innerHTML = '✦ POINTE VERS UN TOPPER DE GÂTEAU ✦';
   hint.style.color = 'rgba(255,255,255,0.7)';
   hint.style.textShadow = 'none';
-
+  hint.style.background = '';
+  hint.style.webkitBackgroundClip = '';
+  hint.style.webkitTextFillColor = '';
   document.getElementById('capture-dot').style.background =
     'radial-gradient(circle, #fff 0%, rgba(255,255,255,0.8) 100%)';
-
   stopParticles();
 }
 
@@ -1280,15 +1580,281 @@ function enterSquadMode() {
 function exitSquadMode() {
   APP.squadMode = false;
   document.getElementById('squad-overlay').style.display = 'none';
+  stopParticles();
+}
+
+/* ======================================================
+   EVA MODE — Festive birthday animations
+====================================================== */
+const EVA_COLORS = ['#FF2D9B','#8B2FFF','#00E5FF','#FFD700','#fff','#FF99CC','#B97AFF'];
+
+function enterEvaMode() {
+  APP.evaMode = true;
+  APP.currentChar = null;
+
+  document.getElementById('scan-frame').style.opacity = '0';
+  document.getElementById('char-name-reveal').classList.remove('visible');
+
+  // Birthday hint
+  const hint = document.getElementById('scan-hint');
+  hint.innerHTML = '🎂 JOYEUX ANNIVERSAIRE EVA ! 🎂';
+  hint.style.background = 'linear-gradient(90deg, #FF2D9B, #00E5FF, #FFD700)';
+  hint.style.webkitBackgroundClip = 'text';
+  hint.style.webkitTextFillColor = 'transparent';
+  hint.style.backgroundClip = 'text';
+
+  // Show Eva birthday overlay
+  const ov = document.getElementById('eva-overlay');
+  ov.style.display = 'flex';
+  const title = document.getElementById('eva-title-wrap');
+  title.style.animation = 'none'; title.offsetHeight;
+  title.style.animation = 'evaIn 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) both';
+
+  // Capture dot cyan
+  document.getElementById('capture-dot').style.background =
+    'radial-gradient(circle, #fff 0%, #00E5FF 100%)';
+
+  // Initial burst
+  for (let i = 0; i < 60; i++) {
+    setTimeout(() => APP.particles.push(new Glitter(EVA_COLORS)), i * 20);
+  }
+  for (let i = 0; i < 8; i++) {
+    setTimeout(() => launchFirework(), i * 300);
+  }
+
+  // Continuous effects
+  stopParticles();
+  animateParticles();
+  APP.particleInterval = setInterval(() => {
+    // Glitter rain
+    for (let i = 0; i < 3; i++) APP.particles.push(new Glitter(EVA_COLORS));
+    // Bubbles
+    if (Math.random() < 0.4) APP.particles.push(new Bubble(EVA_COLORS));
+  }, 80);
+
+  // Fireworks every 2.5s
+  APP.fireworkInterval = setInterval(() => {
+    launchFirework();
+    setTimeout(() => launchFirework(), 400);
+  }, 2500);
+}
+
+function exitEvaMode() {
+  APP.evaMode = false;
+  document.getElementById('eva-overlay').style.display = 'none';
+  document.getElementById('eva-border').style.display = 'none';
+  clearInterval(APP.fireworkInterval);
+  stopParticles();
+}
+
+/* ---- Glitter particle ---- */
+class Glitter {
+  constructor(colors) {
+    this.x  = Math.random() * pCanvas.width;
+    this.y  = -10;
+    this.vx = (Math.random() - 0.5) * 3;
+    this.vy = Math.random() * 3 + 1.5;
+    this.r  = Math.random() * 6 + 2;
+    this.life = 1.0;
+    this.decay = Math.random() * 0.008 + 0.004;
+    this.color = colors[Math.floor(Math.random() * colors.length)];
+    this.rot = Math.random() * Math.PI * 2;
+    this.rotV = (Math.random() - 0.5) * 0.2;
+    this.shape = ['rect','star','diamond'][Math.floor(Math.random()*3)];
+    this.w = this.r * (0.5 + Math.random());
+  }
+  update() {
+    this.x += this.vx + Math.sin(Date.now()*0.002 + this.y*0.05) * 0.5;
+    this.y += this.vy;
+    this.vy += 0.02;
+    this.life -= this.decay;
+    this.rot += this.rotV;
+  }
+  draw() {
+    if (this.life <= 0 || this.y > pCanvas.height + 20) return;
+    pCtx.save();
+    pCtx.globalAlpha = Math.max(0, this.life);
+    pCtx.shadowBlur = 8; pCtx.shadowColor = this.color;
+    pCtx.fillStyle = this.color;
+    pCtx.translate(this.x, this.y); pCtx.rotate(this.rot);
+    if (this.shape === 'rect') {
+      pCtx.fillRect(-this.w/2, -this.r/2, this.w, this.r);
+    } else if (this.shape === 'diamond') {
+      pCtx.beginPath(); pCtx.moveTo(0,-this.r); pCtx.lineTo(this.w*0.5,0);
+      pCtx.lineTo(0,this.r); pCtx.lineTo(-this.w*0.5,0); pCtx.closePath(); pCtx.fill();
+    } else {
+      drawStar(pCtx, 0, 0, 4, this.r, this.r*0.4);
+    }
+    pCtx.restore();
+  }
+}
+
+/* ---- Bubble particle ---- */
+class Bubble {
+  constructor(colors) {
+    this.x  = Math.random() * pCanvas.width;
+    this.y  = pCanvas.height + 20;
+    this.vx = (Math.random() - 0.5) * 1.5;
+    this.vy = -(Math.random() * 2.5 + 1);
+    this.r  = Math.random() * 18 + 8;
+    this.life = 1.0;
+    this.decay = Math.random() * 0.005 + 0.003;
+    this.color = colors[Math.floor(Math.random() * colors.length)];
+    this.phase = Math.random() * Math.PI * 2;
+  }
+  update() {
+    this.x += this.vx + Math.sin(Date.now()*0.001 + this.phase) * 0.8;
+    this.y += this.vy;
+    this.life -= this.decay;
+  }
+  draw() {
+    if (this.life <= 0) return;
+    pCtx.save();
+    pCtx.globalAlpha = Math.max(0, this.life * 0.6);
+    pCtx.strokeStyle = this.color;
+    pCtx.lineWidth = 2;
+    pCtx.shadowBlur = 10; pCtx.shadowColor = this.color;
+    pCtx.beginPath();
+    pCtx.arc(this.x, this.y, this.r, 0, Math.PI*2);
+    pCtx.stroke();
+    // Shine
+    pCtx.globalAlpha = Math.max(0, this.life * 0.3);
+    pCtx.fillStyle = '#fff';
+    pCtx.beginPath();
+    pCtx.arc(this.x - this.r*0.3, this.y - this.r*0.3, this.r*0.2, 0, Math.PI*2);
+    pCtx.fill();
+    pCtx.restore();
+  }
+}
+
+/* ---- Firework ---- */
+function launchFirework() {
+  const x = pCanvas.width * (0.15 + Math.random() * 0.7);
+  const targetY = pCanvas.height * (0.05 + Math.random() * 0.3);
+  const color = EVA_COLORS[Math.floor(Math.random() * EVA_COLORS.length)];
+  // Rocket trail then burst
+  let y = pCanvas.height * 0.7;
+  const speed = (pCanvas.height * 0.65) / 30;
+  let frame = 0;
+  const rocket = setInterval(() => {
+    frame++;
+    y -= speed;
+    APP.particles.push(new RocketTrail(x, y, color));
+    if (y <= targetY || frame > 35) {
+      clearInterval(rocket);
+      // Burst!
+      const burstColors = [color, '#FFD700', '#fff', EVA_COLORS[Math.floor(Math.random()*EVA_COLORS.length)]];
+      for (let i = 0; i < 36; i++) {
+        APP.particles.push(new FireworkShard(x, targetY, burstColors, i * 10));
+      }
+    }
+  }, 16);
+}
+
+class RocketTrail {
+  constructor(x, y, color) {
+    this.x=x; this.y=y; this.vx=(Math.random()-0.5)*1;
+    this.vy=(Math.random()*1+0.5); this.r=3+Math.random()*2;
+    this.life=0.8; this.decay=0.08; this.color=color;
+  }
+  update() { this.x+=this.vx; this.y+=this.vy; this.life-=this.decay; this.r*=0.9; }
+  draw() {
+    if(this.life<=0) return;
+    pCtx.save(); pCtx.globalAlpha=Math.max(0,this.life);
+    pCtx.shadowBlur=10; pCtx.shadowColor=this.color; pCtx.fillStyle=this.color;
+    pCtx.beginPath(); pCtx.arc(this.x,this.y,this.r,0,Math.PI*2); pCtx.fill();
+    pCtx.restore();
+  }
+}
+
+class FireworkShard {
+  constructor(x, y, colors, angleDeg) {
+    const a = (angleDeg * Math.PI) / 180;
+    const speed = 3 + Math.random() * 5;
+    this.x=x; this.y=y;
+    this.vx=Math.cos(a)*speed; this.vy=Math.sin(a)*speed;
+    this.r=3+Math.random()*3; this.life=1.0;
+    this.decay=0.012+Math.random()*0.01;
+    this.color=colors[Math.floor(Math.random()*colors.length)];
+    this.trail=[];
+  }
+  update() {
+    this.trail.push({x:this.x,y:this.y});
+    if(this.trail.length>6) this.trail.shift();
+    this.x+=this.vx; this.y+=this.vy; this.vy+=0.08;
+    this.vx*=0.97; this.life-=this.decay; this.r*=0.97;
+  }
+  draw() {
+    if(this.life<=0) return;
+    pCtx.save();
+    // Trail
+    for(let i=0;i<this.trail.length;i++){
+      pCtx.globalAlpha=Math.max(0,(i/this.trail.length)*this.life*0.5);
+      pCtx.fillStyle=this.color;
+      pCtx.beginPath(); pCtx.arc(this.trail[i].x,this.trail[i].y,this.r*0.6,0,Math.PI*2); pCtx.fill();
+    }
+    pCtx.globalAlpha=Math.max(0,this.life);
+    pCtx.shadowBlur=15; pCtx.shadowColor=this.color; pCtx.fillStyle=this.color;
+    pCtx.beginPath(); pCtx.arc(this.x,this.y,this.r,0,Math.PI*2); pCtx.fill();
+    pCtx.restore();
+  }
+}
+
+/* ======================================================
+   MEGA MODE — All 4 toppers detected
+====================================================== */
+const MEGA_COLORS = ['#FF2D9B','#8B2FFF','#00E5FF','#FFD700','#fff','#FF99CC','#B97AFF','#7FFFAA'];
+
+function enterMegaMode() {
+  APP.megaMode = true;
+  APP.currentChar = null;
+
+  document.getElementById('scan-frame').style.opacity = '0';
+  document.getElementById('char-name-reveal').classList.remove('visible');
 
   const hint = document.getElementById('scan-hint');
-  hint.style.background = '';
-  hint.style.webkitBackgroundClip = '';
-  hint.style.webkitTextFillColor = '';
-  hint.innerHTML = '✦ POINTE VERS UN TOPPER DE GÂTEAU ✦';
-  hint.style.color = 'rgba(255,255,255,0.7)';
-  hint.style.textShadow = 'none';
+  hint.innerHTML = '✨ HUNTRIX VR — SQUAD COMPLET ✨';
+  hint.style.background = 'linear-gradient(90deg,#FF2D9B,#FFD700,#8B2FFF,#00E5FF)';
+  hint.style.webkitBackgroundClip = 'text';
+  hint.style.backgroundClip = 'text';
+  hint.style.webkitTextFillColor = 'transparent';
 
+  const ov = document.getElementById('mega-overlay');
+  ov.style.display = 'flex';
+  const title = document.getElementById('mega-title-wrap');
+  title.style.animation = 'none'; title.offsetHeight;
+  title.style.animation = 'megaIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) both';
+
+  document.getElementById('capture-dot').style.background =
+    'conic-gradient(#FF2D9B,#FFD700,#8B2FFF,#00E5FF,#FF2D9B)';
+
+  // Massive burst
+  for (let i = 0; i < 150; i++) {
+    setTimeout(() => {
+      APP.particles.push(Math.random()<0.4 ? new Glitter(MEGA_COLORS) : new SquadSpark(MEGA_COLORS));
+    }, i * 12);
+  }
+  for (let i = 0; i < 5; i++) setTimeout(() => launchFirework(), i * 200);
+  for (let i = 0; i < 8; i++) setTimeout(() => APP.particles.push(new Bubble(MEGA_COLORS)), i * 150);
+
+  stopParticles();
+  animateParticles();
+  APP.particleInterval = setInterval(() => {
+    for (let i = 0; i < 4; i++) APP.particles.push(new Glitter(MEGA_COLORS));
+    if (Math.random() < 0.5) APP.particles.push(new Bubble(MEGA_COLORS));
+    if (Math.random() < 0.2) APP.particles.push(new SquadSpark(MEGA_COLORS));
+  }, 60);
+  APP.fireworkInterval = setInterval(() => {
+    launchFirework();
+    setTimeout(() => launchFirework(), 300);
+  }, 1800);
+}
+
+function exitMegaMode() {
+  APP.megaMode = false;
+  document.getElementById('mega-overlay').style.display = 'none';
+  document.getElementById('mega-border').style.display = 'none';
+  clearInterval(APP.fireworkInterval);
   stopParticles();
 }
 
@@ -1355,8 +1921,8 @@ function buildScene(blobUrl) {
     <img id="${c.texId}-glow" src="${APP.glowTextures[c.id]}" crossorigin="anonymous">
   `).join('\n');
 
-  // Per-character target entity HTML
-  const targetsHTML = CHARS.map(c => {
+  // Per-character target entity HTML (skip Eva — has special entity below)
+  const targetsHTML = CHARS.filter(c => !c.isEva).map(c => {
     const orbitR = Math.max(c.planeW, c.planeH) * 0.62;
     // Glow plane is slightly larger to account for blur padding
     const glowW = c.planeW * 1.16;
@@ -1424,11 +1990,57 @@ function buildScene(blobUrl) {
   </a-entity>`;
   }).join('\n');
 
-  // Scene — maxTrack 3 to allow all characters simultaneously
+  // Eva special A-Frame entity (shimmer + 4 orbs)
+  const evaChar = CHARS.find(c => c.isEva);
+  const evaOrbitR = Math.max(evaChar.planeW, evaChar.planeH) * 0.65;
+  const evaSpecialHTML = `
+  <a-entity id="entity-eva" mindar-image-target="targetIndex: 3">
+    <a-plane src="#tex-eva-glow"
+      width="${evaChar.planeW * 1.18}" height="${evaChar.planeH * 1.18}"
+      position="0 0 -0.003"
+      material="transparent:true;alphaTest:0.01;shader:flat;depthTest:false;opacity:0.7"
+      animation__g1="property:material.opacity;from:0.35;to:0.9;dir:alternate;dur:700;loop:true;easing:easeInOutSine"
+      animation__g2="property:scale;from:1 1 1;to:1.06 1.06 1;dir:alternate;dur:1100;loop:true;easing:easeInOutSine">
+    </a-plane>
+    <a-plane src="#tex-eva"
+      width="${evaChar.planeW}" height="${evaChar.planeH}"
+      position="0 0 0.003"
+      material="transparent:true;alphaTest:0.05;shader:flat;depthTest:false"
+      animation__sh="property:material.opacity;from:0.75;to:1;dir:alternate;dur:500;loop:true;easing:easeInOutSine"
+      animation__fl="property:position;from:0 -0.015 0.003;to:0 0.03 0.003;dir:alternate;dur:2000;loop:true;easing:easeInOutSine"
+      animation__sc="property:scale;from:1 1 1;to:1.04 1.04 1;dir:alternate;dur:1500;loop:true;easing:easeInOutSine">
+    </a-plane>
+    <a-entity animation__r1="property:rotation;from:0 0 0;to:0 0 360;dur:3000;loop:true;easing:linear">
+      <a-sphere position="${evaOrbitR} 0 0.01" radius="0.07"
+        material="color:#00E5FF;transparent:true;opacity:0.9;shader:flat;emissive:#00E5FF;emissiveIntensity:1"
+        animation__p1="property:scale;from:1 1 1;to:1.8 1.8 1;dir:alternate;dur:600;loop:true;easing:easeInOutSine">
+      </a-sphere>
+    </a-entity>
+    <a-entity animation__r2="property:rotation;from:0 0 45;to:0 0 405;dur:2500;loop:true;easing:linear">
+      <a-sphere position="${evaOrbitR * 0.85} 0 0.01" radius="0.055"
+        material="color:#FF2D9B;transparent:true;opacity:0.85;shader:flat;emissive:#FF2D9B;emissiveIntensity:1"
+        animation__p2="property:scale;from:1 1 1;to:1.6 1.6 1;dir:alternate;dur:700;loop:true;easing:easeInOutSine">
+      </a-sphere>
+    </a-entity>
+    <a-entity animation__r3="property:rotation;from:0 0 0;to:0 0 -360;dur:4000;loop:true;easing:linear">
+      <a-sphere position="${evaOrbitR * 0.7} 0 0.015" radius="0.04"
+        material="color:#FFD700;transparent:true;opacity:0.8;shader:flat;emissive:#FFD700;emissiveIntensity:1"
+        animation__p3="property:scale;from:0.8 0.8 0.8;to:1.6 1.6 1.6;dir:alternate;dur:500;loop:true;easing:easeInOutSine">
+      </a-sphere>
+    </a-entity>
+    <a-entity animation__r4="property:rotation;from:0 0 20;to:0 0 -340;dur:3200;loop:true;easing:linear">
+      <a-sphere position="${evaOrbitR * 0.9} 0 0.012" radius="0.03"
+        material="color:#8B2FFF;transparent:true;opacity:0.75;shader:flat;emissive:#8B2FFF;emissiveIntensity:1"
+        animation__p4="property:scale;from:1 1 1;to:1.5 1.5 1.5;dir:alternate;dur:900;loop:true;easing:easeInOutSine">
+      </a-sphere>
+    </a-entity>
+  </a-entity>`;
+
+  // Scene — maxTrack 4 to allow all targets simultaneously
   const sceneHTML = `
 <a-scene
   id="ar-scene"
-  mindar-image="imageTargetSrc: ${blobUrl}; autoStart: false; uiLoading: no; uiScanning: no; uiError: no; filterMinCF: 0.001; filterBeta: 0.001; maxTrack: 3"
+  mindar-image="imageTargetSrc: ${blobUrl}; autoStart: false; uiLoading: no; uiScanning: no; uiError: no; filterMinCF: 0.001; filterBeta: 0.001; maxTrack: 4"
   color-space="sRGB"
   renderer="colorManagement: true; physicallyCorrectLights: false; antialias: true; alpha: true"
   vr-mode-ui="enabled: false"
@@ -1442,6 +2054,7 @@ function buildScene(blobUrl) {
   <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
   ${targetsHTML}
+  ${evaSpecialHTML}
 
 </a-scene>`;
 
@@ -1531,9 +2144,10 @@ async function compileAndLaunch() {
     // 6. Build and start A-Frame scene
     const sceneEl = await buildScene(blobUrl);
 
-    // 7. Register target events
+    // 7. Register target events (Eva uses its own entity id)
     CHARS.forEach(char => {
-      const el = document.getElementById(`entity-${char.id}`);
+      const entityId = char.isEva ? 'entity-eva' : `entity-${char.id}`;
+      const el = document.getElementById(entityId);
       if (!el) return;
       el.addEventListener('targetFound', () => onTargetFound(char));
       el.addEventListener('targetLost',  () => onTargetLost(char));
@@ -1719,7 +2333,7 @@ async function capturePhoto() {
       ctx.fillStyle = color;
       ctx.shadowBlur = Math.round(vH * 0.02);
       ctx.shadowColor = color;
-      ctx.fillText('HuntrX — ' + charName, vW / 2, vH * 0.06);
+      ctx.fillText('Huntrix VR — ' + charName, vW / 2, vH * 0.06);
       ctx.restore();
     }
 
