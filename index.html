@@ -1172,9 +1172,9 @@ const APP = {
 /* ======================================================
    INDEXED DB CACHE
 ====================================================== */
-const DB_NAME = 'huntrix-vr-v6';
+const DB_NAME = 'huntrix-vr-v8';
 const STORE   = 'mind-data';
-const CACHE_KEY = 'targets-v6-compiled';
+const CACHE_KEY = 'targets-v8-compiled';
 
 function openDB() {
   return new Promise((res, rej) => {
@@ -2040,7 +2040,7 @@ function buildScene(blobUrl) {
   const sceneHTML = `
 <a-scene
   id="ar-scene"
-  mindar-image="imageTargetSrc: ${blobUrl}; autoStart: false; uiLoading: no; uiScanning: no; uiError: no; filterMinCF: 0.001; filterBeta: 0.001; maxTrack: 4"
+  mindar-image="imageTargetSrc: ${blobUrl}; autoStart: false; uiLoading: no; uiScanning: no; uiError: no; filterMinCF: 0.0001; filterBeta: 0.05; warmupTolerance: 5; missTolerance: 8; maxTrack: 4"
   color-space="sRGB"
   renderer="colorManagement: true; physicallyCorrectLights: false; antialias: true; alpha: true"
   vr-mode-ui="enabled: false"
@@ -2183,18 +2183,40 @@ async function loadImg(src) {
    Le fond blanc artificiellement ajouté rendait les 3
    personnages trop similaires → toujours Rumi détecté.
 ====================================================== */
+/* Redimensionne une image pour la compilation MindAR.
+   500px max = meilleure pyramide de features = détection
+   à plus grande distance (toppers petits sur gâteau). */
+function resizeForCompilation(img, maxPx = 500) {
+  const scale = Math.min(1, maxPx / Math.max(img.naturalWidth, img.naturalHeight));
+  const w = Math.round(img.naturalWidth  * scale);
+  const h = Math.round(img.naturalHeight * scale);
+  const c = document.createElement('canvas');
+  c.width = w; c.height = h;
+  const ctx = c.getContext('2d');
+  // Fond noir (correspond au fond réel du topper imprimé)
+  ctx.fillStyle = '#000';
+  ctx.fillRect(0, 0, w, h);
+  ctx.drawImage(img, 0, 0, w, h);
+  return new Promise(res => {
+    const out = new Image();
+    out.onload = () => res(out);
+    out.src = c.toDataURL('image/png');
+  });
+}
+
 async function compileTargets() {
   setProgress(2, 'Chargement des personnages...');
+  const rawImgs = await Promise.all(CHARS.map(c => loadImg(c.imgSrc)));
 
-  // Charger toutes les images (incluant Eva)
-  const imgs = await Promise.all(CHARS.map(c => loadImg(c.imgSrc)));
+  setProgress(6, 'Optimisation pour détection longue portée...');
+  // 500px → pyramide multi-échelle optimale pour petits toppers
+  const compileImgs = await Promise.all(rawImgs.map(img => resizeForCompilation(img, 500)));
 
-  setProgress(8, 'Compilation AR en cours... (~40s)');
-
+  setProgress(10, 'Compilation AR en cours... (~40s)');
   const compiler = new MINDAR.IMAGE.Compiler();
   const buffer = await compiler.compileImageTargets(
-    imgs,
-    progress => setProgress(8 + progress * 0.88, `Compilation... ${Math.round(progress)}%`)
+    compileImgs,
+    progress => setProgress(10 + progress * 0.86, `Compilation... ${Math.round(progress)}%`)
   );
 
   const exported = await compiler.exportData();
@@ -2348,13 +2370,14 @@ async function capturePhoto() {
     else if (APP.squadMode)  drawPhotoOverlaySquad(ctx, cW, cH);
     else if (APP.currentChar) drawPhotoOverlayChar(ctx, cW, cH, APP.currentChar);
 
-    // ── 6. WATERMARK ──
+    // ── 6. WATERMARK — petit, coin bas droit ──
     ctx.save();
-    ctx.font = `bold ${Math.round(cH * 0.024)}px HuntersKPop, sans-serif`;
-    ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
-    ctx.globalAlpha = 0.65; ctx.fillStyle = '#fff';
-    ctx.shadowBlur = 6; ctx.shadowColor = 'rgba(0,0,0,0.9)';
-    ctx.fillText('✦ Huntrix VR ✦', cW / 2, cH - 10);
+    const wmFs = Math.round(cH * 0.018);
+    ctx.font = `${wmFs}px HuntersKPop, sans-serif`;
+    ctx.textAlign = 'right'; ctx.textBaseline = 'bottom';
+    ctx.globalAlpha = 0.45; ctx.fillStyle = '#fff';
+    ctx.shadowBlur = 4; ctx.shadowColor = 'rgba(0,0,0,0.9)';
+    ctx.fillText('Huntrix VR', cW - Math.round(cH * 0.018), cH - Math.round(cH * 0.012));
     ctx.restore();
 
     // ── 7. SAUVEGARDE haute qualité ──
@@ -2392,166 +2415,103 @@ async function capturePhoto() {
 }
 
 /* ════════════════════════════════════════════════════════
-   OVERLAYS TEXTE PHOTO — redessinés sur canvas 2D
-   Reproduisent fidèlement les textes affichés à l'écran
-   avec fond semi-transparent pour lisibilité maximale
+   OVERLAY PHOTO — Coin supérieur gauche, compact et discret
+   Badge arrondi avec fond semi-transparent :
+   - Logo "Huntrix VR" petit en haut
+   - Ligne principale (nom perso / "EVA 7 ANOS" / "SQUAD")
+   - Sous-ligne discrète (rôle / membres / emojis)
+   Laisse toute la photo visible → personne + gâteau visibles
 ════════════════════════════════════════════════════════ */
 
-function photoGlow(ctx, text, x, y, color, fs, blur) {
-  ctx.save();
-  ctx.font = `bold ${fs}px HuntersKPop, sans-serif`;
-  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-  // Fond sombre derrière le texte pour lisibilité
-  const met = ctx.measureText(text);
-  const pad = fs * 0.25;
-  ctx.globalAlpha = 0.45;
-  ctx.fillStyle = '#000';
-  ctx.beginPath();
-  ctx.roundRect(x - met.width/2 - pad, y - fs*0.65, met.width + pad*2, fs*1.3, fs*0.2);
-  ctx.fill();
-  // Texte avec glow
-  ctx.globalAlpha = 1;
-  ctx.shadowColor = color; ctx.shadowBlur = blur;
-  ctx.fillStyle = color;
-  ctx.fillText(text, x, y);
-  ctx.shadowBlur = blur * 1.8; ctx.globalAlpha = 0.55;
-  ctx.fillText(text, x, y);
-  ctx.restore();
-}
+function drawPhotoBadge(ctx, cW, cH, lines) {
+  // lines = [{text, color, fontSize (fraction of cH), bold}]
+  // Badge positionné en haut à gauche avec padding
+  const pad    = cH * 0.018;
+  const margin = cH * 0.022;
+  const badgeW = cW * 0.52;  // largeur max du badge
 
-function photoSmall(ctx, text, x, y, color, fs) {
+  // Mesure hauteur totale
+  let totalH = pad * 2;
+  const rendered = lines.map(l => {
+    const fs = Math.round(cH * l.fs);
+    ctx.font = `${l.bold ? 'bold ' : ''}${fs}px HuntersKPop, sans-serif`;
+    const w = Math.min(ctx.measureText(l.text).width, badgeW - pad * 2);
+    totalH += fs * 1.3;
+    return { ...l, fs, w };
+  });
+  totalH += pad * (lines.length - 1) * 0.2;
+
+  const bx = margin;
+  const by = margin;
+  const bw = Math.min(badgeW, Math.max(...rendered.map(r => r.w)) + pad * 2);
+
+  // Fond arrondi semi-transparent
   ctx.save();
-  ctx.font = `${fs}px HuntersKPop, sans-serif`;
-  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-  ctx.globalAlpha = 0.9; ctx.fillStyle = color;
-  ctx.shadowColor = color; ctx.shadowBlur = 10;
-  ctx.fillText(text, x, y);
+  ctx.globalAlpha = 0.72;
+  ctx.fillStyle = '#060010';
+  ctx.beginPath();
+  ctx.roundRect(bx, by, bw, totalH, cH * 0.018);
+  ctx.fill();
+
+  // Bordure colorée fine (couleur de la première ligne)
+  ctx.globalAlpha = 0.9;
+  ctx.strokeStyle = rendered[0]?.color || '#FFD700';
+  ctx.lineWidth = Math.max(1.5, cH * 0.003);
+  ctx.beginPath();
+  ctx.roundRect(bx, by, bw, totalH, cH * 0.018);
+  ctx.stroke();
   ctx.restore();
+
+  // Textes
+  let curY = by + pad + rendered[0].fs * 0.5;
+  rendered.forEach((l, i) => {
+    ctx.save();
+    ctx.font = `${l.bold ? 'bold ' : ''}${l.fs}px HuntersKPop, sans-serif`;
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'middle';
+    ctx.globalAlpha = i === 0 ? 1 : 0.88;
+    ctx.fillStyle = l.color;
+    ctx.shadowColor = l.color;
+    ctx.shadowBlur = l.bold ? 12 : 6;
+    ctx.fillText(l.text, bx + pad, curY);
+    ctx.restore();
+    curY += l.fs * 1.3 + pad * 0.2;
+  });
 }
 
 function drawPhotoOverlayChar(ctx, cW, cH, char) {
-  // Bandeau haut : NOM + rôle
-  const bannerH = cH * 0.2;
-  ctx.save();
-  const grad = ctx.createLinearGradient(0, 0, 0, bannerH);
-  grad.addColorStop(0, 'rgba(0,0,0,0.75)');
-  grad.addColorStop(1, 'rgba(0,0,0,0)');
-  ctx.fillStyle = grad;
-  ctx.fillRect(0, 0, cW, bannerH);
-  ctx.restore();
-
-  photoGlow(ctx, char.name, cW/2, cH * 0.09, char.color, cH * 0.1, 35);
-  photoSmall(ctx, char.role.toUpperCase(), cW/2, cH * 0.175, 'rgba(255,255,255,0.85)', cH * 0.03);
+  drawPhotoBadge(ctx, cW, cH, [
+    { text: '✦ Huntrix VR',          color: 'rgba(255,255,255,0.6)', fs: 0.022, bold: false },
+    { text: char.name,                color: char.color,              fs: 0.068, bold: true  },
+    { text: char.role.toUpperCase(),  color: 'rgba(255,255,255,0.7)', fs: 0.024, bold: false },
+  ]);
 }
 
 function drawPhotoOverlaySquad(ctx, cW, cH) {
-  const bannerH = cH * 0.25;
-  ctx.save();
-  const grad = ctx.createLinearGradient(0, 0, 0, bannerH);
-  grad.addColorStop(0, 'rgba(0,0,0,0.8)');
-  grad.addColorStop(1, 'rgba(0,0,0,0)');
-  ctx.fillStyle = grad; ctx.fillRect(0, 0, cW, bannerH);
-  ctx.restore();
-
-  photoGlow(ctx, 'SQUAD COMPLET', cW/2, cH * 0.09, '#FFD700', cH * 0.075, 30);
-
-  const members = [
-    {name:'MIRA', color:'#FF4500'},
-    {name:'RUMI', color:'#8B2FFF'},
-    {name:'ZOEY', color:'#FF8C00'},
-  ];
-  const gap = cW * 0.3;
-  members.forEach((m, i) => {
-    const mx = cW/2 + (i-1) * gap;
-    photoGlow(ctx, m.name, mx, cH * 0.185, m.color, cH * 0.05, 18);
-  });
-
-  photoSmall(ctx, '✦ Huntrix VR ✦', cW/2, cH * 0.245, 'rgba(255,255,255,0.7)', cH * 0.026);
+  drawPhotoBadge(ctx, cW, cH, [
+    { text: '✦ Huntrix VR',          color: 'rgba(255,255,255,0.6)', fs: 0.022, bold: false },
+    { text: 'SQUAD COMPLET',          color: '#FFD700',               fs: 0.055, bold: true  },
+    { text: 'MIRA · RUMI · ZOEY',    color: 'rgba(255,255,255,0.75)', fs: 0.026, bold: false },
+  ]);
 }
 
 function drawPhotoOverlayEva(ctx, cW, cH) {
-  // Bandeau haut
-  const bannerH = cH * 0.36;
-  ctx.save();
-  const grad = ctx.createLinearGradient(0, 0, 0, bannerH);
-  grad.addColorStop(0, 'rgba(0,0,10,0.82)');
-  grad.addColorStop(1, 'rgba(0,0,10,0)');
-  ctx.fillStyle = grad; ctx.fillRect(0, 0, cW, bannerH);
-  ctx.restore();
-
-  // ✦ JOYEUX ANNIVERSAIRE ✦
-  photoSmall(ctx, '✦ JOYEUX ANNIVERSAIRE ✦', cW/2, cH * 0.055, 'rgba(255,255,255,0.9)', cH * 0.033);
-
-  // EVA en grand avec dégradé cyan→blanc→rose→or
-  ctx.save();
-  const fs = cH * 0.17;
-  ctx.font = `bold ${fs}px HuntersKPop, sans-serif`;
-  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-  const gEva = ctx.createLinearGradient(cW*0.15, 0, cW*0.85, 0);
-  gEva.addColorStop(0,   '#00E5FF');
-  gEva.addColorStop(0.35,'#ffffff');
-  gEva.addColorStop(0.65,'#FF2D9B');
-  gEva.addColorStop(1,   '#FFD700');
-  ctx.shadowColor = '#00E5FF'; ctx.shadowBlur = 50;
-  ctx.fillStyle = gEva;
-  ctx.fillText('EVA', cW/2, cH * 0.185);
-  ctx.shadowBlur = 90; ctx.globalAlpha = 0.4;
-  ctx.fillText('EVA', cW/2, cH * 0.185);
-  ctx.restore();
-
-  // 7 ANOS
-  photoGlow(ctx, '7 ANOS', cW/2, cH * 0.29, '#FFD700', cH * 0.058, 25);
-
-  // Emojis
-  ctx.save();
-  ctx.font = `${cH * 0.055}px serif`;
-  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-  ctx.fillText('🎂  🎉  ⭐  🎊  🎂', cW/2, cH * 0.355);
-  ctx.restore();
+  // Ligne "EVA" avec dégradé simulé (on utilise cyan pour la couleur dominante)
+  drawPhotoBadge(ctx, cW, cH, [
+    { text: 'Huntrix VR',              color: 'rgba(255,255,255,0.6)', fs: 0.022, bold: false },
+    { text: '🎂 Joyeux Anniversaire', color: '#ffffff',               fs: 0.030, bold: false },
+    { text: 'EVA — 7 ANOS',           color: '#00E5FF',               fs: 0.068, bold: true  },
+    { text: '🎉 🌟 🎊',              color: '#FFD700',               fs: 0.028, bold: false },
+  ]);
 }
 
 function drawPhotoOverlayMega(ctx, cW, cH) {
-  const bannerH = cH * 0.38;
-  ctx.save();
-  const grad = ctx.createLinearGradient(0, 0, 0, bannerH);
-  grad.addColorStop(0, 'rgba(0,0,10,0.85)');
-  grad.addColorStop(1, 'rgba(0,0,10,0)');
-  ctx.fillStyle = grad; ctx.fillRect(0, 0, cW, bannerH);
-  ctx.restore();
-
-  // HAPPY BIRTHDAY en dégradé
-  ctx.save();
-  const fs = cH * 0.092;
-  ctx.font = `bold ${fs}px HuntersKPop, sans-serif`;
-  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-  const gM = ctx.createLinearGradient(0, 0, cW, 0);
-  gM.addColorStop(0,'#FF4500'); gM.addColorStop(0.33,'#FFD700');
-  gM.addColorStop(0.66,'#8B2FFF'); gM.addColorStop(1,'#FF8C00');
-  ctx.shadowColor = '#FFD700'; ctx.shadowBlur = 50;
-  ctx.fillStyle = gM;
-  ctx.fillText('HAPPY BIRTHDAY', cW/2, cH * 0.09);
-  ctx.restore();
-
-  // EVA — 7 ANOS
-  photoGlow(ctx, 'EVA — 7 ANOS 🎂', cW/2, cH * 0.19, '#00E5FF', cH * 0.06, 28);
-
-  // Membres
-  const members = [
-    {name:'MIRA',color:'#FF4500'},
-    {name:'RUMI',color:'#8B2FFF'},
-    {name:'ZOEY',color:'#FF8C00'},
-  ];
-  const gap = cW * 0.3;
-  members.forEach((m,i) => {
-    photoGlow(ctx, m.name, cW/2+(i-1)*gap, cH*0.275, m.color, cH*0.048, 15);
-  });
-
-  // Emojis
-  ctx.save();
-  ctx.font = `${cH * 0.058}px serif`;
-  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-  ctx.fillText('🎆  🎂  ✨  🎊  🎉  🎆', cW/2, cH * 0.345);
-  ctx.restore();
+  drawPhotoBadge(ctx, cW, cH, [
+    { text: '✦ Huntrix VR Squad',     color: 'rgba(255,255,255,0.6)', fs: 0.022, bold: false },
+    { text: 'Happy Birthday',          color: '#FFD700',               fs: 0.055, bold: true  },
+    { text: 'EVA — 7 ANOS 🎂',        color: '#00E5FF',               fs: 0.042, bold: true  },
+    { text: 'MIRA · RUMI · ZOEY',     color: 'rgba(255,255,255,0.75)', fs: 0.024, bold: false },
+  ]);
 }
 
 /* ======================================================
