@@ -900,6 +900,43 @@
     .mega-bolt.tr { top: 4%; right: 3%; animation-delay: 0.15s; }
     .mega-bolt.bl { bottom: 4%; left: 3%; animation-delay: 0.3s; }
     .mega-bolt.br { bottom: 4%; right: 3%; animation-delay: 0.1s; }
+
+    /* ===================================================
+       RESCAN BUTTON
+    =================================================== */
+    #rescan-btn {
+      display: none;
+      position: fixed;
+      bottom: 110px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 200;
+      align-items: center;
+      gap: 0.4rem;
+      background: rgba(6, 0, 16, 0.82);
+      border: 1.5px solid rgba(255,255,255,0.35);
+      border-radius: 50px;
+      padding: 0.55rem 1.2rem;
+      color: rgba(255,255,255,0.9);
+      font-family: 'HuntersKPop', sans-serif;
+      font-size: clamp(0.7rem, 3vw, 0.85rem);
+      letter-spacing: 1px;
+      cursor: pointer;
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+      transition: opacity 0.2s, transform 0.2s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    #rescan-btn:active {
+      opacity: 0.7;
+      transform: translateX(-50%) scale(0.96);
+    }
+    @keyframes rescanIn {
+      from { opacity: 0; transform: translateX(-50%) translateY(12px); }
+      to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+    }
+
   </style>
 </head>
 <body>
@@ -993,6 +1030,13 @@
     <div class="capture-dot" id="capture-dot"></div>
   </div>
 </div>
+
+<!-- ═══════════════════════════════════════════════════
+     RESCAN BUTTON — coin bas gauche, discret
+══════════════════════════════════════════════════════ -->
+<button id="rescan-btn" onclick="rescanNow()">
+  <span id="rescan-label">🔍 Rescanner (15s)</span>
+</button>
 
 <!-- ═══════════════════════════════════════════════════
      SQUAD MODE OVERLAY (all 3 detected)
@@ -1167,7 +1211,13 @@ const APP = {
   animId: null,
   sceneReady: false,
   glowTextures: {},          // charId -> data URL of silhouette glow
+  // Animation freeze — maintient les effets 15s après perte du target
+  freezeTimer: null,         // setTimeout handle
+  frozen: false,             // true = animation figée (compte à rebours actif)
+  frozenState: null,         // snapshot: {mode, char} pour rétablir si re-détecté
 };
+
+const FREEZE_DURATION = 15000; // 15 secondes
 
 /* ======================================================
    INDEXED DB CACHE
@@ -1392,6 +1442,9 @@ async function buildGlowTexture(imgSrc, color, blurPx = 18) {
 function onTargetFound(char) {
   APP.foundTargets.add(char.id);
 
+  // Si on était en freeze, annuler et reprendre normalement
+  if (APP.frozen) cancelFreeze();
+
   const has3Chars = ['mira','rumi','zoey'].every(id => APP.foundTargets.has(id));
   const hasEva = APP.foundTargets.has('eva');
 
@@ -1465,38 +1518,39 @@ function onTargetLost(char) {
   const has3Chars = ['mira','rumi','zoey'].every(id => APP.foundTargets.has(id));
   const hasEva = APP.foundTargets.has('eva');
 
-  // Was in mega mode
+  // Si un autre target encore visible → pas de freeze, on switch
   if (APP.megaMode) {
     exitMegaMode();
-    // Re-evaluate remaining state
-    if (has3Chars && hasEva) { enterMegaMode(); return; }
-    if (has3Chars) { enterSquadMode(); return; }
-    if (hasEva) { enterEvaMode(); return; }
+    if (has3Chars && hasEva) { cancelFreeze(); enterMegaMode(); return; }
+    if (has3Chars) { cancelFreeze(); enterSquadMode(); return; }
+    if (hasEva) { cancelFreeze(); enterEvaMode(); return; }
     if (APP.foundTargets.size > 0) {
       const still = CHARS.find(c => APP.foundTargets.has(c.id));
-      if (still) onTargetFound(still);
+      if (still) { cancelFreeze(); onTargetFound(still); return; }
     }
+    // Rien de visible → freeze en mode mega
+    freezeAnimation('mega', null);
     return;
   }
 
-  // Was in squad mode
   if (APP.squadMode) {
     exitSquadMode();
-    if (hasEva) { enterEvaMode(); return; }
+    if (hasEva) { cancelFreeze(); enterEvaMode(); return; }
     if (APP.foundTargets.size > 0) {
       const still = CHARS.find(c => APP.foundTargets.has(c.id));
-      if (still) onTargetFound(still);
-    } else { resetARUI(); }
+      if (still) { cancelFreeze(); onTargetFound(still); return; }
+    }
+    freezeAnimation('squad', null);
     return;
   }
 
-  // Was in eva mode
   if (APP.evaMode) {
     exitEvaMode();
     if (APP.foundTargets.size > 0) {
       const still = CHARS.find(c => APP.foundTargets.has(c.id));
-      if (still) onTargetFound(still);
-    } else { resetARUI(); }
+      if (still) { cancelFreeze(); onTargetFound(still); return; }
+    }
+    freezeAnimation('eva', null);
     return;
   }
 
@@ -1504,13 +1558,15 @@ function onTargetLost(char) {
   if (APP.foundTargets.size > 0) {
     const stillVisible = CHARS.find(c => APP.foundTargets.has(c.id));
     if (stillVisible && stillVisible.id !== APP.currentChar?.id) {
+      cancelFreeze();
       APP.currentChar = null;
       onTargetFound(stillVisible);
     }
     return;
   }
 
-  resetARUI();
+  // Rien de visible → freeze l'animation du personnage perdu 15s
+  freezeAnimation('char', char);
 }
 
 function resetARUI() {
@@ -1528,6 +1584,110 @@ function resetARUI() {
   document.getElementById('capture-dot').style.background =
     'radial-gradient(circle, #fff 0%, rgba(255,255,255,0.8) 100%)';
   stopParticles();
+}
+
+/* ======================================================
+   FREEZE ANIMATION — Maintient les effets 15s après
+   perte du target pour permettre de reculer + photo
+====================================================== */
+function freezeAnimation(mode, char) {
+  // Annuler un freeze précédent s'il existe
+  if (APP.freezeTimer) clearTimeout(APP.freezeTimer);
+
+  APP.frozen = true;
+  APP.frozenState = { mode, char };
+
+  // Re-entrer le mode pour maintenir tous les effets visuels actifs
+  if (mode === 'mega')        enterMegaMode();
+  else if (mode === 'squad')  enterSquadMode();
+  else if (mode === 'eva')    enterEvaMode();
+  else if (mode === 'char' && char) {
+    // Remettre le UI du personnage sans modifier foundTargets
+    APP.currentChar = char;
+    document.getElementById('scan-frame').style.opacity = '0';
+    const reveal = document.getElementById('char-name-reveal');
+    const nameEl = document.getElementById('reveal-name-text');
+    const roleEl = document.getElementById('reveal-role-text');
+    nameEl.textContent = char.name;
+    nameEl.style.cssText = `color:${char.color};text-shadow:0 0 20px ${char.color},0 0 40px ${char.color},0 0 80px ${char.glowHex}88;`;
+    roleEl.style.color = 'rgba(255,255,255,0.7)';
+    roleEl.textContent = char.role.toUpperCase();
+    reveal.style.animation = 'none'; reveal.offsetHeight;
+    reveal.style.animation = 'nameIn 0.4s ease-out forwards';
+    reveal.classList.add('visible');
+    const hint = document.getElementById('scan-hint');
+    hint.innerHTML = `✦ ${char.name} DETECTED ✦`;
+    hint.style.color = char.color;
+    hint.style.textShadow = `0 0 15px ${char.color}`;
+    document.getElementById('capture-dot').style.background =
+      `radial-gradient(circle, #fff 0%, ${char.color} 100%)`;
+    startParticles(char);
+  }
+
+  // Afficher bouton rescan + countdown
+  showRescanButton(FREEZE_DURATION);
+
+  // Après 15s → reset auto
+  APP.freezeTimer = setTimeout(() => {
+    APP.frozen = false;
+    APP.frozenState = null;
+    hideRescanButton();
+    // Quitter proprement tous les modes
+    if (APP.megaMode) exitMegaMode();
+    else if (APP.squadMode) exitSquadMode();
+    else if (APP.evaMode) exitEvaMode();
+    resetARUI();
+  }, FREEZE_DURATION);
+}
+
+function cancelFreeze() {
+  if (APP.freezeTimer) { clearTimeout(APP.freezeTimer); APP.freezeTimer = null; }
+  APP.frozen = false;
+  APP.frozenState = null;
+  hideRescanButton();
+}
+
+function rescanNow() {
+  // Bouton "Rescanner" pressé → annule le freeze et remet en mode scan
+  cancelFreeze();
+  // Quitter tous les modes actifs
+  if (APP.megaMode) exitMegaMode();
+  else if (APP.squadMode) exitSquadMode();
+  else if (APP.evaMode) exitEvaMode();
+  resetARUI();
+}
+
+/* ======================================================
+   RESCAN BUTTON — Bouton discret coin bas-gauche
+====================================================== */
+let rescanCountdownInterval = null;
+
+function showRescanButton(duration) {
+  let btn = document.getElementById('rescan-btn');
+  if (!btn) return;
+  btn.style.display = 'flex';
+  btn.style.animation = 'rescanIn 0.3s ease-out both';
+
+  // Compte à rebours dans le bouton
+  const label = document.getElementById('rescan-label');
+  let remaining = Math.round(duration / 1000);
+  if (label) label.textContent = `🔍 Rescanner (${remaining}s)`;
+
+  if (rescanCountdownInterval) clearInterval(rescanCountdownInterval);
+  rescanCountdownInterval = setInterval(() => {
+    remaining--;
+    if (label) label.textContent = `🔍 Rescanner (${remaining}s)`;
+    if (remaining <= 0) {
+      clearInterval(rescanCountdownInterval);
+      rescanCountdownInterval = null;
+    }
+  }, 1000);
+}
+
+function hideRescanButton() {
+  if (rescanCountdownInterval) { clearInterval(rescanCountdownInterval); rescanCountdownInterval = null; }
+  const btn = document.getElementById('rescan-btn');
+  if (btn) btn.style.display = 'none';
 }
 
 /* ======================================================
