@@ -1147,7 +1147,7 @@ const CHARS = [
     particleColors: ['#FF4500', '#FF2D9B', '#FFD700', '#FF7043', '#fff'],
     imgSrc: 'assets/Mira.png',
     texId: 'tex-mira',
-    // Mira new image: 2500x2369, ratio h/w=0.948
+    // Mira new image: 2000x1895, ratio h/w=0.948
     planeW: 1.6, planeH: 1.517,
   },
   {
@@ -1161,8 +1161,8 @@ const CHARS = [
     particleColors: ['#8B2FFF', '#B97AFF', '#FFD700', '#CC99FF', '#fff'],
     imgSrc: 'assets/Rumi.png',
     texId: 'tex-rumi',
-    // Rumi new image: 1000x2353, ratio h/w=2.353
-    planeW: 1.0, planeH: 2.353,
+    // Rumi new image: 849x2000, ratio h/w=2.356
+    planeW: 1.0, planeH: 2.356,
   },
   {
     index: 2,
@@ -1175,8 +1175,8 @@ const CHARS = [
     particleColors: ['#FF8C00', '#FFD700', '#00E5FF', '#FFA500', '#fff'],
     imgSrc: 'assets/Zoey.png',
     texId: 'tex-zoey',
-    // Zoey new image: 1000x2393, ratio h/w=2.393
-    planeW: 1.0, planeH: 2.393,
+    // Zoey new image: 835x2000, ratio h/w=2.395
+    planeW: 1.0, planeH: 2.395,
   },
   {
     index: 3,
@@ -1222,9 +1222,9 @@ const FREEZE_DURATION = 15000; // 15 secondes
 /* ======================================================
    INDEXED DB CACHE
 ====================================================== */
-const DB_NAME = 'huntrix-vr-v8';
+const DB_NAME = 'huntrix-vr-v10';
 const STORE   = 'mind-data';
-const CACHE_KEY = 'targets-v8-compiled';
+const CACHE_KEY = 'targets-v10-compiled';
 
 function openDB() {
   return new Promise((res, rej) => {
