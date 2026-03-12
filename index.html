@@ -7,7 +7,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="theme-color" content="#030008">
-  <title>Huntrix VR — K-Pop Demon Hunters</title>
+  <title>Huntrix AR — K-Pop Demon Hunters</title>
 
   <!-- MindAR + A-Frame -->
   <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image.prod.js"></script>
@@ -946,7 +946,7 @@
 ══════════════════════════════════════════════════════ -->
 <div id="splash" class="screen">
   <div class="splash-logo-wrap">
-    <div class="splash-logo">Huntrix VR</div>
+    <div class="splash-logo">Huntrix AR</div>
     <div class="splash-subtitle">K-Pop Demon Hunters</div>
   </div>
 
@@ -978,7 +978,7 @@
      COMPILE / LOADING SCREEN
 ══════════════════════════════════════════════════════ -->
 <div id="compile-screen" class="screen">
-  <div class="compile-logo">Huntrix VR</div>
+  <div class="compile-logo">Huntrix AR</div>
   <div class="compile-msg" id="compile-msg">Initialisation de la magie...</div>
   <div class="progress-track">
     <div class="progress-fill" id="progress-fill"></div>
@@ -1049,7 +1049,7 @@
   <span class="squad-bolt br">⚡</span>
   <div id="squad-title-wrap">
     <span class="squad-label">✦ SQUAD COMPLET ✦</span>
-    <span class="squad-main">Huntrix VR</span>
+    <span class="squad-main">Huntrix AR</span>
     <span class="squad-subtitle">DEMON HUNTERS UNLOCKED</span>
   </div>
   <div id="squad-members">
@@ -1100,7 +1100,7 @@
   <span class="mega-bolt bl">⚡</span>
   <span class="mega-bolt br">⚡</span>
   <div id="mega-title-wrap">
-    <span class="mega-pre">✦ HUNTRIX VR — SQUAD COMPLET ✦</span>
+    <span class="mega-pre">✦ HUNTRIX AR — SQUAD COMPLET ✦</span>
     <span class="mega-title">HAPPY<br>BIRTHDAY</span>
     <span class="mega-sub">EVA — 7 ANOS 🎂</span>
     <div class="mega-emoji-row">
@@ -1222,9 +1222,9 @@ const FREEZE_DURATION = 15000; // 15 secondes
 /* ======================================================
    INDEXED DB CACHE
 ====================================================== */
-const DB_NAME = 'huntrix-vr-v12';
+const DB_NAME = 'huntrix-ar-v13';
 const STORE   = 'mind-data';
-const CACHE_KEY = 'targets-v12-compiled';
+const CACHE_KEY = 'targets-v13-compiled';
 
 function openDB() {
   return new Promise((res, rej) => {
@@ -1371,7 +1371,7 @@ function showError(msg) {
   document.getElementById('progress-pct').textContent = '';
   document.getElementById('compile-note').style.display = 'none';
   document.getElementById('retry-btn').style.display = 'inline-block';
-  console.error('[Huntrix VR]', msg);
+  console.error('[Huntrix AR]', msg);
 }
 
 function retryCompile() {
@@ -1973,7 +1973,7 @@ function enterMegaMode() {
   document.getElementById('char-name-reveal').classList.remove('visible');
 
   const hint = document.getElementById('scan-hint');
-  hint.innerHTML = '✨ HUNTRIX VR — SQUAD COMPLET ✨';
+  hint.innerHTML = '✨ HUNTRIX AR — SQUAD COMPLET ✨';
   hint.style.background = 'linear-gradient(90deg,#FF2D9B,#FFD700,#8B2FFF,#00E5FF)';
   hint.style.webkitBackgroundClip = 'text';
   hint.style.backgroundClip = 'text';
@@ -2354,40 +2354,52 @@ async function loadImg(src) {
    500px max = pyramide multi-échelle optimale pour petits
    toppers (8-10cm) vus de loin.
 ====================================================== */
-function prepareForCompilation(img, maxPx = 500) {
-  /* ── Stratégie fond gris neutre ──────────────────────
-     Les toppers sont découpés à la silhouette et posés sur
-     pic : le fond derrière est variable (crème, décor...).
-     
-     Fond gris neutre #888 = recommandation officielle MindAR
-     pour fonds inconnus. MindAR base alors la détection sur
-     les TEXTURES INTERNES du personnage (indépendantes du fond) :
-       • Mira  : cheveux roses, épée holographique bleue/blanche
-       • Rumi  : veste jaune, cheveux violets, épée violette
-       • Zoey  : pantalon bleu/or, cristaux cyan, top vert
-       • Eva   : logo coloré sur fond uniforme
-     Ces textures internes sont très distinctives entre elles.
-     
-     500px max → pyramide multi-échelle optimale pour petits
-     toppers (8-10cm) détectés de loin.
-  ─────────────────────────────────────────────────────── */
-  const scale = Math.min(1, maxPx / Math.max(img.naturalWidth, img.naturalHeight));
-  const w = Math.round(img.naturalWidth  * scale);
-  const h = Math.round(img.naturalHeight * scale);
+/* ── Crop spécifique par personnage pour la compilation ─
+   Mira a une épée qui s'étend loin à droite (image ~carrée).
+   Cela force l'utilisateur à s'éloigner trop pour avoir
+   toute l'image dans le cadre → résolution trop faible
+   → pas de détection.
+   Solution : compiler uniquement le corps (65% gauche)
+   qui contient 79% des pixels. Format résultant : portrait
+   (ratio ~1.46) → détectable de bien plus près.
+   L'IMAGE AFFICHÉE en AR reste complète (épée visible).
+─────────────────────────────────────────────────────── */
+const COMPILE_CROP = {
+  mira: { x: 0, y: 0, wRatio: 0.65, hRatio: 1.0 },  // coupe l'épée droite
+  rumi: { x: 0, y: 0, wRatio: 1.0,  hRatio: 1.0 },  // déjà portrait — OK
+  zoey: { x: 0, y: 0, wRatio: 1.0,  hRatio: 1.0 },  // déjà portrait — OK
+  eva:  { x: 0, y: 0, wRatio: 1.0,  hRatio: 1.0 },  // logo carré — OK
+};
+
+function prepareForCompilation(img, charId, maxPx = 500) {
+  /* Fond gris neutre #888 = recommandation MindAR pour fonds
+     variables/inconnus. MindAR base la détection sur les
+     textures internes indépendantes du fond. */
+  const crop = COMPILE_CROP[charId] || { x:0, y:0, wRatio:1, hRatio:1 };
+
+  // Dimensions source après crop
+  const srcW = Math.round(img.naturalWidth  * crop.wRatio);
+  const srcH = Math.round(img.naturalHeight * crop.hRatio);
+  const srcX = Math.round(img.naturalWidth  * crop.x);
+  const srcY = Math.round(img.naturalHeight * crop.y);
+
+  // Dimensions canvas à 500px max
+  const scale = Math.min(1, maxPx / Math.max(srcW, srcH));
+  const w = Math.round(srcW * scale);
+  const h = Math.round(srcH * scale);
 
   const c = document.createElement('canvas');
   c.width = w; c.height = h;
   const ctx = c.getContext('2d');
 
-  // Fond gris neutre — maximise la robustesse face aux fonds variables
+  // Fond gris neutre
   ctx.fillStyle = '#888888';
   ctx.fillRect(0, 0, w, h);
 
-  // Personnage par-dessus (fond transparent → gris visible en périphérie)
-  ctx.drawImage(img, 0, 0, w, h);
+  // Personnage (recadré si besoin)
+  ctx.drawImage(img, srcX, srcY, srcW, srcH, 0, 0, w, h);
 
-  // Simuler légèrement l'assombrissement impression (~10%)
-  // pour coller à la réalité physique du topper
+  // Simulation légère assombrissement impression (~10%)
   const imageData = ctx.getImageData(0, 0, w, h);
   const d = imageData.data;
   for (let i = 0; i < d.length; i += 4) {
@@ -2410,7 +2422,7 @@ async function compileTargets() {
 
   setProgress(6, 'Préparation silhouettes fond blanc...');
   const compileImgs = await Promise.all(
-    rawImgs.map(img => prepareForCompilation(img, 500))
+    rawImgs.map((img, i) => prepareForCompilation(img, CHARS[i].id, 500))
   );
 
   setProgress(10, 'Compilation AR en cours... (~40s)');
@@ -2585,7 +2597,7 @@ async function capturePhoto() {
     ctx.textAlign = 'right'; ctx.textBaseline = 'bottom';
     ctx.globalAlpha = 0.45; ctx.fillStyle = '#fff';
     ctx.shadowBlur = 4; ctx.shadowColor = 'rgba(0,0,0,0.9)';
-    ctx.fillText('Huntrix VR', cW - Math.round(cH * 0.018), cH - Math.round(cH * 0.012));
+    ctx.fillText('Huntrix AR', cW - Math.round(cH * 0.018), cH - Math.round(cH * 0.012));
     ctx.restore();
 
     // ── 7. SAUVEGARDE haute qualité ──
@@ -2625,7 +2637,7 @@ async function capturePhoto() {
 /* ════════════════════════════════════════════════════════
    OVERLAY PHOTO — Coin supérieur gauche, compact et discret
    Badge arrondi avec fond semi-transparent :
-   - Logo "Huntrix VR" petit en haut
+   - Logo "Huntrix AR" petit en haut
    - Ligne principale (nom perso / "EVA 7 ANOS" / "SQUAD")
    - Sous-ligne discrète (rôle / membres / emojis)
    Laisse toute la photo visible → personne + gâteau visibles
@@ -2689,7 +2701,7 @@ function drawPhotoBadge(ctx, cW, cH, lines) {
 
 function drawPhotoOverlayChar(ctx, cW, cH, char) {
   drawPhotoBadge(ctx, cW, cH, [
-    { text: '✦ Huntrix VR',          color: 'rgba(255,255,255,0.6)', fs: 0.022, bold: false },
+    { text: '✦ Huntrix AR',          color: 'rgba(255,255,255,0.6)', fs: 0.022, bold: false },
     { text: char.name,                color: char.color,              fs: 0.068, bold: true  },
     { text: char.role.toUpperCase(),  color: 'rgba(255,255,255,0.7)', fs: 0.024, bold: false },
   ]);
@@ -2697,7 +2709,7 @@ function drawPhotoOverlayChar(ctx, cW, cH, char) {
 
 function drawPhotoOverlaySquad(ctx, cW, cH) {
   drawPhotoBadge(ctx, cW, cH, [
-    { text: '✦ Huntrix VR',          color: 'rgba(255,255,255,0.6)', fs: 0.022, bold: false },
+    { text: '✦ Huntrix AR',          color: 'rgba(255,255,255,0.6)', fs: 0.022, bold: false },
     { text: 'SQUAD COMPLET',          color: '#FFD700',               fs: 0.055, bold: true  },
     { text: 'MIRA · RUMI · ZOEY',    color: 'rgba(255,255,255,0.75)', fs: 0.026, bold: false },
   ]);
@@ -2706,7 +2718,7 @@ function drawPhotoOverlaySquad(ctx, cW, cH) {
 function drawPhotoOverlayEva(ctx, cW, cH) {
   // Ligne "EVA" avec dégradé simulé (on utilise cyan pour la couleur dominante)
   drawPhotoBadge(ctx, cW, cH, [
-    { text: 'Huntrix VR',              color: 'rgba(255,255,255,0.6)', fs: 0.022, bold: false },
+    { text: 'Huntrix AR',              color: 'rgba(255,255,255,0.6)', fs: 0.022, bold: false },
     { text: '🎂 Joyeux Anniversaire', color: '#ffffff',               fs: 0.030, bold: false },
     { text: 'EVA — 7 ANOS',           color: '#00E5FF',               fs: 0.068, bold: true  },
     { text: '🎉 🌟 🎊',              color: '#FFD700',               fs: 0.028, bold: false },
@@ -2715,7 +2727,7 @@ function drawPhotoOverlayEva(ctx, cW, cH) {
 
 function drawPhotoOverlayMega(ctx, cW, cH) {
   drawPhotoBadge(ctx, cW, cH, [
-    { text: '✦ Huntrix VR Squad',     color: 'rgba(255,255,255,0.6)', fs: 0.022, bold: false },
+    { text: '✦ Huntrix AR Squad',     color: 'rgba(255,255,255,0.6)', fs: 0.022, bold: false },
     { text: 'Happy Birthday',          color: '#FFD700',               fs: 0.055, bold: true  },
     { text: 'EVA — 7 ANOS 🎂',        color: '#00E5FF',               fs: 0.042, bold: true  },
     { text: 'MIRA · RUMI · ZOEY',     color: 'rgba(255,255,255,0.75)', fs: 0.024, bold: false },
