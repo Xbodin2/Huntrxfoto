@@ -978,7 +978,7 @@
      COMPILE / LOADING SCREEN
 ══════════════════════════════════════════════════════ -->
 <div id="compile-screen" class="screen">
-  <div class="compile-logo">HuntrX</div>
+  <div class="compile-logo">Huntrix VR</div>
   <div class="compile-msg" id="compile-msg">Initialisation de la magie...</div>
   <div class="progress-track">
     <div class="progress-fill" id="progress-fill"></div>
@@ -1222,9 +1222,9 @@ const FREEZE_DURATION = 15000; // 15 secondes
 /* ======================================================
    INDEXED DB CACHE
 ====================================================== */
-const DB_NAME = 'huntrix-vr-v11';
+const DB_NAME = 'huntrix-vr-v12';
 const STORE   = 'mind-data';
-const CACHE_KEY = 'targets-v11-compiled';
+const CACHE_KEY = 'targets-v12-compiled';
 
 function openDB() {
   return new Promise((res, rej) => {
@@ -1371,7 +1371,7 @@ function showError(msg) {
   document.getElementById('progress-pct').textContent = '';
   document.getElementById('compile-note').style.display = 'none';
   document.getElementById('retry-btn').style.display = 'inline-block';
-  console.error('[HuntrX AR]', msg);
+  console.error('[Huntrix VR]', msg);
 }
 
 function retryCompile() {
@@ -2355,7 +2355,22 @@ async function loadImg(src) {
    toppers (8-10cm) vus de loin.
 ====================================================== */
 function prepareForCompilation(img, maxPx = 500) {
-  // 1. Calculer les dimensions à 500px max
+  /* ── Stratégie fond gris neutre ──────────────────────
+     Les toppers sont découpés à la silhouette et posés sur
+     pic : le fond derrière est variable (crème, décor...).
+     
+     Fond gris neutre #888 = recommandation officielle MindAR
+     pour fonds inconnus. MindAR base alors la détection sur
+     les TEXTURES INTERNES du personnage (indépendantes du fond) :
+       • Mira  : cheveux roses, épée holographique bleue/blanche
+       • Rumi  : veste jaune, cheveux violets, épée violette
+       • Zoey  : pantalon bleu/or, cristaux cyan, top vert
+       • Eva   : logo coloré sur fond uniforme
+     Ces textures internes sont très distinctives entre elles.
+     
+     500px max → pyramide multi-échelle optimale pour petits
+     toppers (8-10cm) détectés de loin.
+  ─────────────────────────────────────────────────────── */
   const scale = Math.min(1, maxPx / Math.max(img.naturalWidth, img.naturalHeight));
   const w = Math.round(img.naturalWidth  * scale);
   const h = Math.round(img.naturalHeight * scale);
@@ -2364,32 +2379,27 @@ function prepareForCompilation(img, maxPx = 500) {
   c.width = w; c.height = h;
   const ctx = c.getContext('2d');
 
-  // 2. FOND BLANC MAT — correspond au papier réel du topper
-  ctx.fillStyle = '#ffffff';
+  // Fond gris neutre — maximise la robustesse face aux fonds variables
+  ctx.fillStyle = '#888888';
   ctx.fillRect(0, 0, w, h);
 
-  // 3. Dessiner le personnage (zones transparentes → fond blanc visible)
+  // Personnage par-dessus (fond transparent → gris visible en périphérie)
   ctx.drawImage(img, 0, 0, w, h);
 
-  // 4. Simuler l'assombrissement à l'impression (~15% plus sombre)
-  //    On applique un overlay noir semi-transparent sur les pixels opaques
+  // Simuler légèrement l'assombrissement impression (~10%)
+  // pour coller à la réalité physique du topper
   const imageData = ctx.getImageData(0, 0, w, h);
   const d = imageData.data;
   for (let i = 0; i < d.length; i += 4) {
-    // Seulement sur les pixels non-blancs (= le personnage, pas le fond)
-    const isWhiteBg = d[i] > 240 && d[i+1] > 240 && d[i+2] > 240;
-    if (!isWhiteBg) {
-      d[i]   = Math.round(d[i]   * 0.85); // R -15%
-      d[i+1] = Math.round(d[i+1] * 0.85); // G -15%
-      d[i+2] = Math.round(d[i+2] * 0.85); // B -15%
-    }
+    d[i]   = Math.round(d[i]   * 0.9);
+    d[i+1] = Math.round(d[i+1] * 0.9);
+    d[i+2] = Math.round(d[i+2] * 0.9);
   }
   ctx.putImageData(imageData, 0, 0);
 
   return new Promise(res => {
     const out = new Image();
     out.onload = () => res(out);
-    // JPEG pour forcer fond blanc opaque (pas de canal alpha)
     out.src = c.toDataURL('image/jpeg', 0.95);
   });
 }
@@ -2518,35 +2528,42 @@ async function capturePhoto() {
     } catch (_) { /* tainted sur certains appareils — on continue */ }
 
     // ── 3. PERSONNAGES redessinés si GL non capturé ──
+    // Positionnés en bas à gauche, petits (≤22% largeur écran)
+    // pour ne pas cacher les personnes sur la photo
     if (!glCaptured && APP.foundTargets.size > 0) {
+      const margin   = cW * 0.03;  // marge bord écran
+      const maxCharW = cW * 0.22;  // largeur max par personnage
+      const bottomY  = cH * 0.98;  // alignement bas
+
       const visibleChars = CHARS.filter(c => APP.foundTargets.has(c.id) && !c.isEva);
       visibleChars.forEach((c, i) => {
         const img = CHAR_IMAGES[c.id];
         if (!img || !img.complete) return;
-        const totalW = cW * (visibleChars.length > 1 ? 0.42 : 0.62);
-        const totalH = totalW * (c.planeH / c.planeW);
-        const offsetX = visibleChars.length > 1
-          ? (i - (visibleChars.length - 1) / 2) * cW * 0.22
-          : 0;
-        const px = cW / 2 - totalW / 2 + offsetX;
-        const py = cH / 2 - totalH * 0.55;
+        const charW = maxCharW;
+        const charH = charW * (c.planeH / c.planeW);
+        // Empiler de gauche à droite avec petit chevauchement
+        const px = margin + i * (charW * 0.85);
+        const py = bottomY - charH;
         ctx.save();
-        ctx.shadowColor = c.color; ctx.shadowBlur = 30; ctx.globalAlpha = 0.95;
-        ctx.drawImage(img, px, py, totalW, totalH);
-        ctx.shadowBlur = 55; ctx.globalAlpha = 0.35;
-        ctx.drawImage(img, px, py, totalW, totalH);
+        ctx.shadowColor = c.color; ctx.shadowBlur = 18; ctx.globalAlpha = 0.92;
+        ctx.drawImage(img, px, py, charW, charH);
         ctx.restore();
       });
 
+      // Eva : coin bas gauche (ou à côté des autres si squad aussi)
       if (APP.foundTargets.has('eva')) {
         const ec = CHARS.find(c => c.isEva);
         const ei = CHAR_IMAGES['eva'];
         if (ei && ec) {
-          const ew = cW * 0.48;
+          const ew = cW * 0.22;
           const eh = ew * (ec.planeH / ec.planeW);
+          // Si des persos squad sont aussi visibles, Eva va à droite
+          const eOffset = visibleChars.length > 0
+            ? margin + visibleChars.length * (ew * 0.85)
+            : margin;
           ctx.save();
-          ctx.shadowColor = '#00E5FF'; ctx.shadowBlur = 35; ctx.globalAlpha = 0.95;
-          ctx.drawImage(ei, cW / 2 - ew / 2, cH * 0.5, ew, eh);
+          ctx.shadowColor = '#00E5FF'; ctx.shadowBlur = 18; ctx.globalAlpha = 0.92;
+          ctx.drawImage(ei, eOffset, bottomY - eh, ew, eh);
           ctx.restore();
         }
       }
