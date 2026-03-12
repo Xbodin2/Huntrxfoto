@@ -1222,9 +1222,9 @@ const FREEZE_DURATION = 15000; // 15 secondes
 /* ======================================================
    INDEXED DB CACHE
 ====================================================== */
-const DB_NAME = 'huntrix-ar-v13';
+const DB_NAME = 'huntrix-ar-v14';
 const STORE   = 'mind-data';
-const CACHE_KEY = 'targets-v13-compiled';
+const CACHE_KEY = 'targets-v14-compiled';
 
 function openDB() {
   return new Promise((res, rej) => {
@@ -2539,56 +2539,22 @@ async function capturePhoto() {
       }
     } catch (_) { /* tainted sur certains appareils — on continue */ }
 
-    // ── 3. PERSONNAGES redessinés si GL non capturé ──
-    // Positionnés en bas à gauche, petits (≤22% largeur écran)
-    // pour ne pas cacher les personnes sur la photo
-    if (!glCaptured && APP.foundTargets.size > 0) {
-      const margin   = cW * 0.03;  // marge bord écran
-      const maxCharW = cW * 0.22;  // largeur max par personnage
-      const bottomY  = cH * 0.98;  // alignement bas
-
-      const visibleChars = CHARS.filter(c => APP.foundTargets.has(c.id) && !c.isEva);
-      visibleChars.forEach((c, i) => {
-        const img = CHAR_IMAGES[c.id];
-        if (!img || !img.complete) return;
-        const charW = maxCharW;
-        const charH = charW * (c.planeH / c.planeW);
-        // Empiler de gauche à droite avec petit chevauchement
-        const px = margin + i * (charW * 0.85);
-        const py = bottomY - charH;
-        ctx.save();
-        ctx.shadowColor = c.color; ctx.shadowBlur = 18; ctx.globalAlpha = 0.92;
-        ctx.drawImage(img, px, py, charW, charH);
-        ctx.restore();
-      });
-
-      // Eva : coin bas gauche (ou à côté des autres si squad aussi)
-      if (APP.foundTargets.has('eva')) {
-        const ec = CHARS.find(c => c.isEva);
-        const ei = CHAR_IMAGES['eva'];
-        if (ei && ec) {
-          const ew = cW * 0.22;
-          const eh = ew * (ec.planeH / ec.planeW);
-          // Si des persos squad sont aussi visibles, Eva va à droite
-          const eOffset = visibleChars.length > 0
-            ? margin + visibleChars.length * (ew * 0.85)
-            : margin;
-          ctx.save();
-          ctx.shadowColor = '#00E5FF'; ctx.shadowBlur = 18; ctx.globalAlpha = 0.92;
-          ctx.drawImage(ei, eOffset, bottomY - eh, ew, eh);
-          ctx.restore();
-        }
-      }
-    }
+    // ── 3. Canvas GL A-Frame redessiné si non capturé ──
+    // (uniquement les effets 3D manquants — personnages gérés séparément)
 
     // ── 4. PARTICULES (canvas 2D pur) ──
     ctx.drawImage(pCanvas, 0, 0, cW, cH);
 
-    // ── 5. OVERLAYS TEXTE ──
-    if (APP.megaMode)        drawPhotoOverlayMega(ctx, cW, cH);
-    else if (APP.evaMode)    drawPhotoOverlayEva(ctx, cW, cH);
-    else if (APP.squadMode)  drawPhotoOverlaySquad(ctx, cW, cH);
+    // ── 5. OVERLAYS TEXTE (badge coin haut-gauche) ──
+    if (APP.megaMode)         drawPhotoOverlayMega(ctx, cW, cH);
+    else if (APP.evaMode)     drawPhotoOverlayEva(ctx, cW, cH);
+    else if (APP.squadMode)   drawPhotoOverlaySquad(ctx, cW, cH);
     else if (APP.currentChar) drawPhotoOverlayChar(ctx, cW, cH, APP.currentChar);
+
+    // ── 5b. PERSONNAGE(S) — coin bas gauche, toujours affiché ──
+    // Hauteur max = 28% de la hauteur écran → visible mais discret
+    // Affiché après les overlays texte pour rester au premier plan
+    drawPhotoCharCorner(ctx, cW, cH);
 
     // ── 6. WATERMARK — petit, coin bas droit ──
     ctx.save();
@@ -2642,6 +2608,77 @@ async function capturePhoto() {
    - Sous-ligne discrète (rôle / membres / emojis)
    Laisse toute la photo visible → personne + gâteau visibles
 ════════════════════════════════════════════════════════ */
+
+/* ════════════════════════════════════════════════════════
+   DESSIN PERSONNAGE — Coin bas gauche de la photo
+   Toujours affiché (indépendamment du GL canvas).
+   Taille max : 28% de cH en hauteur pour les portraits,
+   adaptée selon le ratio de chaque personnage.
+   Avec halo coloré et fond arrondi semi-transparent
+   pour le détacher du décor.
+════════════════════════════════════════════════════════ */
+function drawPhotoCharCorner(ctx, cW, cH) {
+  const margin  = cW * 0.028;          // marge bord
+  const maxH    = cH * 0.28;           // hauteur max du personnage
+  const bottomY = cH - margin * 1.5;   // base alignée en bas
+  const gapX    = cW * 0.015;          // espacement entre personnages
+
+  // Collecter les personnages visibles (détectés ou freeze actif)
+  const detectedIds = new Set(APP.foundTargets);
+  // Si freeze actif, on utilise l'état figé
+  if (APP.frozen && APP.frozenState) {
+    const fs = APP.frozenState;
+    if (fs.mode === 'char' && fs.char) detectedIds.add(fs.char.id);
+    if (fs.mode === 'squad' || fs.mode === 'mega') ['mira','rumi','zoey'].forEach(id => detectedIds.add(id));
+    if (fs.mode === 'eva'   || fs.mode === 'mega') detectedIds.add('eva');
+  }
+
+  const visibleChars = CHARS.filter(c => detectedIds.has(c.id));
+  if (visibleChars.length === 0) return;
+
+  // Calculer la largeur totale occupée pour ne pas dépasser le centre
+  let curX = margin;
+  visibleChars.forEach((c, i) => {
+    const img = CHAR_IMAGES[c.id];
+    if (!img || !img.complete) return;
+
+    // Dimensions en respectant le ratio, hauteur max = maxH
+    const ratio  = c.planeH / c.planeW;
+    const charH  = Math.min(maxH, maxH);
+    const charW  = charH / ratio;
+
+    // Ne pas dépasser la moitié gauche de la photo
+    if (curX + charW > cW * 0.55) return;
+
+    const px = curX;
+    const py = bottomY - charH;
+
+    // Fond arrondi semi-transparent derrière le personnage
+    ctx.save();
+    ctx.globalAlpha = 0.35;
+    ctx.fillStyle = '#000';
+    ctx.beginPath();
+    ctx.roundRect(px - cW*0.008, py - cW*0.008,
+                  charW + cW*0.016, charH + cW*0.016,
+                  cW * 0.015);
+    ctx.fill();
+    ctx.restore();
+
+    // Halo coloré
+    ctx.save();
+    ctx.shadowColor = c.color;
+    ctx.shadowBlur  = Math.round(cH * 0.02);
+    ctx.globalAlpha = 0.95;
+    ctx.drawImage(img, px, py, charW, charH);
+    // Second pass léger pour renforcer le glow
+    ctx.shadowBlur  = Math.round(cH * 0.04);
+    ctx.globalAlpha = 0.3;
+    ctx.drawImage(img, px, py, charW, charH);
+    ctx.restore();
+
+    curX += charW + gapX;
+  });
+}
 
 function drawPhotoBadge(ctx, cW, cH, lines) {
   // lines = [{text, color, fontSize (fraction of cH), bold}]
