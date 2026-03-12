@@ -1222,9 +1222,9 @@ const FREEZE_DURATION = 15000; // 15 secondes
 /* ======================================================
    INDEXED DB CACHE
 ====================================================== */
-const DB_NAME = 'huntrix-ar-v14';
+const DB_NAME = 'huntrix-ar-v15';
 const STORE   = 'mind-data';
-const CACHE_KEY = 'targets-v14-compiled';
+const CACHE_KEY = 'targets-v15-compiled';
 
 function openDB() {
   return new Promise((res, rej) => {
@@ -2642,13 +2642,25 @@ function drawPhotoCharCorner(ctx, cW, cH) {
     const img = CHAR_IMAGES[c.id];
     if (!img || !img.complete) return;
 
-    // Dimensions en respectant le ratio, hauteur max = maxH
-    const ratio  = c.planeH / c.planeW;
-    const charH  = Math.min(maxH, maxH);
-    const charW  = charH / ratio;
+    // Dimensions en respectant le ratio
+    // Pour les images paysage (ratio < 1, ex: Mira avec épée),
+    // on contraint la LARGEUR max plutôt que la hauteur
+    // sinon charW dépasse le seuil et le personnage est ignoré
+    const ratio   = c.planeH / c.planeW;
+    const maxCharW = cW * 0.30;  // largeur max absolue
+    let charH, charW;
+    if (ratio < 1) {
+      // Image paysage → contraindre par largeur
+      charW = Math.min(maxCharW, maxH / ratio);
+      charH = charW * ratio;
+    } else {
+      // Image portrait → contraindre par hauteur (comportement normal)
+      charH = maxH;
+      charW = charH / ratio;
+    }
 
-    // Ne pas dépasser la moitié gauche de la photo
-    if (curX + charW > cW * 0.55) return;
+    // Ne pas dépasser les 60% gauche de la photo
+    if (curX + charW > cW * 0.60) return;
 
     const px = curX;
     const py = bottomY - charH;
