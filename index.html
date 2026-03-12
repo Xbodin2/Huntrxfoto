@@ -1222,9 +1222,9 @@ const FREEZE_DURATION = 15000; // 15 secondes
 /* ======================================================
    INDEXED DB CACHE
 ====================================================== */
-const DB_NAME = 'huntrix-vr-v10';
+const DB_NAME = 'huntrix-vr-v11';
 const STORE   = 'mind-data';
-const CACHE_KEY = 'targets-v10-compiled';
+const CACHE_KEY = 'targets-v11-compiled';
 
 function openDB() {
   return new Promise((res, rej) => {
@@ -2335,32 +2335,62 @@ async function loadImg(src) {
 }
 
 /* ======================================================
-   COMPILE TARGETS
-   On compile les images originales DIRECTEMENT pour que
-   MindAR détecte les vraies couleurs/textures distinctives
-   de chaque personnage (fond transparent = noir canvas,
-   ce qui est cohérent avec le fond sombre du décor).
-   Le fond blanc artificiellement ajouté rendait les 3
-   personnages trop similaires → toujours Rumi détecté.
+   COMPILE TARGETS — Basé sur la silhouette, fond blanc mat
+
+   STRATÉGIE : les toppers sont découpés à la silhouette
+   et imprimés sur papier blanc mat. On compile donc chaque
+   personnage sur FOND BLANC (= réalité du topper physique).
+
+   La silhouette unique de chaque personnage est le vrai
+   discriminant :
+     • Mira  : large/paysage, épée horizontale à droite
+     • Rumi  : portrait fin, épée verticale vers le bas
+     • Zoey  : portrait, bras levé avec cristal
+     • Eva   : logo paysage carré
+
+   On simule aussi l'assombrissement à l'impression (-15%)
+   pour que le modèle MindAR corresponde à la réalité.
+
+   500px max = pyramide multi-échelle optimale pour petits
+   toppers (8-10cm) vus de loin.
 ====================================================== */
-/* Redimensionne une image pour la compilation MindAR.
-   500px max = meilleure pyramide de features = détection
-   à plus grande distance (toppers petits sur gâteau). */
-function resizeForCompilation(img, maxPx = 500) {
+function prepareForCompilation(img, maxPx = 500) {
+  // 1. Calculer les dimensions à 500px max
   const scale = Math.min(1, maxPx / Math.max(img.naturalWidth, img.naturalHeight));
   const w = Math.round(img.naturalWidth  * scale);
   const h = Math.round(img.naturalHeight * scale);
+
   const c = document.createElement('canvas');
   c.width = w; c.height = h;
   const ctx = c.getContext('2d');
-  // Fond noir (correspond au fond réel du topper imprimé)
-  ctx.fillStyle = '#000';
+
+  // 2. FOND BLANC MAT — correspond au papier réel du topper
+  ctx.fillStyle = '#ffffff';
   ctx.fillRect(0, 0, w, h);
+
+  // 3. Dessiner le personnage (zones transparentes → fond blanc visible)
   ctx.drawImage(img, 0, 0, w, h);
+
+  // 4. Simuler l'assombrissement à l'impression (~15% plus sombre)
+  //    On applique un overlay noir semi-transparent sur les pixels opaques
+  const imageData = ctx.getImageData(0, 0, w, h);
+  const d = imageData.data;
+  for (let i = 0; i < d.length; i += 4) {
+    // Seulement sur les pixels non-blancs (= le personnage, pas le fond)
+    const isWhiteBg = d[i] > 240 && d[i+1] > 240 && d[i+2] > 240;
+    if (!isWhiteBg) {
+      d[i]   = Math.round(d[i]   * 0.85); // R -15%
+      d[i+1] = Math.round(d[i+1] * 0.85); // G -15%
+      d[i+2] = Math.round(d[i+2] * 0.85); // B -15%
+    }
+  }
+  ctx.putImageData(imageData, 0, 0);
+
   return new Promise(res => {
     const out = new Image();
     out.onload = () => res(out);
-    out.src = c.toDataURL('image/png');
+    // JPEG pour forcer fond blanc opaque (pas de canal alpha)
+    out.src = c.toDataURL('image/jpeg', 0.95);
   });
 }
 
@@ -2368,9 +2398,10 @@ async function compileTargets() {
   setProgress(2, 'Chargement des personnages...');
   const rawImgs = await Promise.all(CHARS.map(c => loadImg(c.imgSrc)));
 
-  setProgress(6, 'Optimisation pour détection longue portée...');
-  // 500px → pyramide multi-échelle optimale pour petits toppers
-  const compileImgs = await Promise.all(rawImgs.map(img => resizeForCompilation(img, 500)));
+  setProgress(6, 'Préparation silhouettes fond blanc...');
+  const compileImgs = await Promise.all(
+    rawImgs.map(img => prepareForCompilation(img, 500))
+  );
 
   setProgress(10, 'Compilation AR en cours... (~40s)');
   const compiler = new MINDAR.IMAGE.Compiler();
